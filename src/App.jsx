@@ -156,7 +156,7 @@ function ScoreCell({ value, faceValue, onChange }) {
           transition-all duration-150
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
         "
-        placeholder={focused ? 'dados' : '—'}
+        placeholder={focused ? 'dados' : (calculated !== '' ? '' : '—')}
       />
       {/* Display calculated value when not focused */}
       {!focused && calculated !== '' && (
