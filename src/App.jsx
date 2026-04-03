@@ -30,32 +30,48 @@ function emptyScores(players) {
 
 function playerTotal(scores, pi) {
   return ROWS.reduce((acc, r) => {
-    const l = parseFloat(scores[pi]?.[r.id]?.L) || 0
-    const o = parseFloat(scores[pi]?.[r.id]?.O) || 0
-    return acc + l + o
+    const opc = parseFloat(scores[pi]?.[r.id]?.Opc) || 0
+    const obl = parseFloat(scores[pi]?.[r.id]?.Obl) || 0
+    return acc + (opc + obl) * r.value
   }, 0)
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function ScoreCell({ value, onChange }) {
+function ScoreCell({ value, faceValue, onChange }) {
+  const [focused, setFocused] = useState(false)
+
+  const numDice = parseFloat(value)
+  const calculated = !isNaN(numDice) && value !== '' ? numDice * faceValue : ''
+
   return (
-    <input
-      type="number"
-      inputMode="numeric"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="
-        w-full text-center text-sm font-semibold
-        bg-white/10 text-white placeholder-white/30
-        rounded-lg py-2 px-1
-        border border-white/10 focus:border-amber-400/80
-        focus:outline-none focus:ring-1 focus:ring-amber-400/60
-        transition-all duration-150
-        [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
-      "
-      placeholder="—"
-    />
+    <div className="relative w-full">
+      <input
+        type="number"
+        inputMode="numeric"
+        value={focused ? value : ''}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className="
+          w-full text-center text-sm font-semibold
+          bg-white/10 text-white placeholder-white/30
+          rounded-lg py-2 px-1
+          border border-white/10 focus:border-amber-400/80
+          focus:outline-none focus:ring-1 focus:ring-amber-400/60
+          transition-all duration-150
+          [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
+        "
+        placeholder={focused ? 'dados' : '—'}
+      />
+      {/* Display calculated value when not focused */}
+      {!focused && calculated !== '' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="text-sm font-bold text-white">{calculated}</span>
+          <span className="text-[9px] text-white/35 ml-0.5 mt-0.5">({value}×{faceValue})</span>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -187,8 +203,8 @@ export default function App() {
       </header>
 
       {/* Scrollable table area */}
-      <div className="overflow-x-auto pb-6">
-        <table className="min-w-full border-separate border-spacing-0" style={{ minWidth: `${Math.max(320, 80 + numPlayers * 120)}px` }}>
+      <div className="overflow-x-auto pb-6 flex justify-center">
+        <table className="border-separate border-spacing-0 mx-auto" style={{ minWidth: `${Math.max(320, 80 + numPlayers * 120)}px`, width: `${Math.max(320, 80 + numPlayers * 120)}px` }}>
           <thead>
             {/* Player name row */}
             <tr>
@@ -235,6 +251,7 @@ export default function App() {
                     <td key={`${pi}-${sub}`} className="px-1 py-1.5">
                       <ScoreCell
                         value={scores[pi]?.[row.id]?.[sub] ?? ''}
+                        faceValue={row.value}
                         onChange={val => updateScore(pi, row.id, sub, val)}
                       />
                     </td>
