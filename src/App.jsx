@@ -326,7 +326,7 @@ export default function App() {
             </tr>
             {/* L / O sub-header row */}
             <tr>
-              <th className="sticky left-0 z-20 bg-slate-900 text-left px-2 py-1 text-[10px] text-white/40 font-medium uppercase w-12 min-w-[48px]">
+              <th className="sticky left-0 z-20 bg-slate-900 text-center px-2 py-1 text-[10px] text-white/40 font-medium uppercase w-12 min-w-[48px]">
                 Cara
               </th>
               {players.map((_, pi) =>
