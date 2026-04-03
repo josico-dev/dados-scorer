@@ -42,9 +42,7 @@ function DiceAs() {
   return (
     <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
-      {/* Spade */}
-      <path d="M24 8 C18 14 12 16 12 22 C12 26 15 28 18 27 C16 30 15 32 13 34 H35 C33 32 32 30 30 27 C33 28 36 26 36 22 C36 16 30 14 24 8Z" fill="#f59e0b"/>
-      <text x="24" y="45" textAnchor="middle" fontSize="7" fill="#f59e0b" fontWeight="bold" fontFamily="serif">A</text>
+      <circle cx="24" cy="24" r="9" fill="#ef4444"/>
     </svg>
   )
 }
@@ -53,9 +51,7 @@ function DiceK() {
   return (
     <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
-      {/* Crown */}
-      <path d="M10 34 L10 20 L18 28 L24 14 L30 28 L38 20 L38 34 Z" fill="#f59e0b"/>
-      <rect x="10" y="34" width="28" height="4" rx="2" fill="#f59e0b"/>
+      <text x="24" y="33" textAnchor="middle" fontSize="26" fill="#f59e0b" fontWeight="bold" fontFamily="serif">K</text>
     </svg>
   )
 }
@@ -64,13 +60,7 @@ function DiceQ() {
   return (
     <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
-      {/* Flower / Queen symbol */}
-      <circle cx="24" cy="18" r="6" fill="#f59e0b"/>
-      <circle cx="15" cy="26" r="5" fill="#f59e0b"/>
-      <circle cx="33" cy="26" r="5" fill="#f59e0b"/>
-      <circle cx="24" cy="30" r="5" fill="#f59e0b"/>
-      <circle cx="24" cy="22" r="4" fill="#1e293b"/>
-      <text x="24" y="27" textAnchor="middle" fontSize="9" fill="#f59e0b" fontWeight="bold" fontFamily="serif">Q</text>
+      <text x="24" y="33" textAnchor="middle" fontSize="26" fill="#f59e0b" fontWeight="bold" fontFamily="serif">Q</text>
     </svg>
   )
 }
@@ -79,11 +69,7 @@ function DiceJ() {
   return (
     <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
-      {/* Jester hat */}
-      <path d="M16 36 L16 20 Q16 10 24 10 Q32 10 32 20 L32 36 Z" fill="#f59e0b"/>
-      <circle cx="16" cy="19" r="5" fill="#fcd34d"/>
-      <circle cx="32" cy="19" r="5" fill="#fcd34d"/>
-      <text x="24" y="32" textAnchor="middle" fontSize="11" fill="#1e293b" fontWeight="bold" fontFamily="serif">J</text>
+      <text x="24" y="33" textAnchor="middle" fontSize="26" fill="#f59e0b" fontWeight="bold" fontFamily="serif">J</text>
     </svg>
   )
 }
