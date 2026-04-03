@@ -1,16 +1,59 @@
-# React + Vite
+# 🎲 Dados Scorer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Marcador de puntuaciones para juego de dados. Diseñado para usar en el móvil.
 
-Currently, two official plugins are available:
+## ¿Cómo funciona?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+La tabla tiene una fila por cada cara del dado y una columna por cada jugador (dividida en **Opcional** y **Obligado**).
 
-## React Compiler
+En cada celda introduces el **número de dados** que has sacado — la app multiplica sola por el valor de esa cara y muestra el resultado.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+> Ejemplo: sacas 4 ases → escribes `4` → la app muestra `24` (4 × 6)
 
-## Expanding the ESLint configuration
+Al hacer clic en una celda vuelves a ver los dados para editar.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Los datos se guardan automáticamente en el navegador, así que no pierdes nada si recargas la página.
+
+## Caras del dado
+
+| Icono | Cara | Valor |
+|-------|------|-------|
+| 🔴    | AS   | 6 pts |
+| K     | K    | 5 pts |
+| Q     | Q    | 4 pts |
+| J     | J    | 3 pts |
+| ⚅     | VI   | 2 pts |
+| ⚄     | V    | 1 pt  |
+
+## Estructura del código
+
+```
+src/
+├── App.jsx          # Componente principal — estado global y tabla
+├── config.js        # Configuración: caras del dado y jugadores por defecto
+├── storage.js       # Guardar y cargar el estado en localStorage
+├── helpers.js       # Funciones: crear marcador vacío, calcular total
+├── DiceIcons.jsx    # Iconos SVG de cada cara del dado
+├── ScoreCell.jsx    # Celda de puntuación (muestra resultado, edita dados)
+├── PlayersModal.jsx # Modal para añadir/renombrar/eliminar jugadores
+└── ResetModal.jsx   # Modal de confirmación de reset
+```
+
+## Desarrollo local
+
+```bash
+npm install
+npm run dev
+```
+
+## Deploy en Netlify
+
+El archivo `netlify.toml` ya está configurado. Solo conecta el repo en Netlify y listo.
+
+- **Build command:** `npm run build`
+- **Publish dir:** `dist`
+
+## Stack
+
+- [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
