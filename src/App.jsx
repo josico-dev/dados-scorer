@@ -5,12 +5,12 @@ import { useState } from 'react'
 const DEFAULT_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 const ROWS = [
-  { id: 'as', label: 'AS', value: 6 },
-  { id: 'k',  label: 'K',  value: 5 },
-  { id: 'q',  label: 'Q',  value: 4 },
-  { id: 'j',  label: 'J',  value: 3 },
-  { id: 'vi', label: 'VI', value: 2 },
-  { id: 'v',  label: 'V',  value: 1 },
+  { id: 'as', label: 'AS', symbol: '♠️', value: 6 },
+  { id: 'k',  label: 'K',  symbol: '👑', value: 5 },
+  { id: 'q',  label: 'Q',  symbol: '👸', value: 4 },
+  { id: 'j',  label: 'J',  symbol: '🃏', value: 3 },
+  { id: 'vi', label: 'VI', symbol: '🔴', value: 2 },
+  { id: 'v',  label: 'V',  symbol: '⚫', value: 1 },
 ]
 
 const SUBTYPES = ['Opc', 'Obl']   // Opcional, Obligado
@@ -241,8 +241,8 @@ export default function App() {
                 {/* Row label */}
                 <td className="sticky left-0 z-10 bg-inherit px-2 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base font-black text-amber-300">{row.label}</span>
-                    <span className="text-xs text-white/40 font-medium">({row.value})</span>
+                    <span className="text-2xl leading-none">{row.symbol}</span>
+                  <span className="text-xs text-white/40 font-medium">({row.value})</span>
                   </div>
                 </td>
 
