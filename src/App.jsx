@@ -386,12 +386,7 @@ export default function App() {
         </table>
       </div>
 
-      {/* Legend */}
-      <div className="px-4 pb-8 flex gap-4 justify-center text-[11px] text-white/40">
-        <span><span className="text-sky-400 font-bold">Opc</span> = Opcional</span>
-        <span><span className="text-emerald-400 font-bold">Obl</span> = Obligado</span>
-        <span className="text-white/25">· número entre paréntesis = valor de la cara</span>
-      </div>
+
 
       {/* Modals */}
       {showPlayers && (
