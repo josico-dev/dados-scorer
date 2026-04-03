@@ -51,14 +51,14 @@ function ScoreCell({ value, faceValue, onChange }) {
         inputMode="numeric"
         value={focused ? value : ''}
         onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
+        onFocus={e => { setFocused(true); e.target.select() }}
         onBlur={() => setFocused(false)}
         className="
-          w-full text-center text-sm font-semibold
+          w-full text-center text-base font-semibold
           bg-white/10 text-white placeholder-white/30
-          rounded-lg py-2 px-1
+          rounded-xl py-3 px-1
           border border-white/10 focus:border-amber-400/80
-          focus:outline-none focus:ring-1 focus:ring-amber-400/60
+          focus:outline-none focus:ring-2 focus:ring-amber-400/60
           transition-all duration-150
           [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none
         "
@@ -67,8 +67,8 @@ function ScoreCell({ value, faceValue, onChange }) {
       {/* Display calculated value when not focused */}
       {!focused && calculated !== '' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-sm font-bold text-white">{calculated}</span>
-          <span className="text-[9px] text-white/35 ml-0.5 mt-0.5">({value}×{faceValue})</span>
+          <span className="text-base font-bold text-white">{calculated}</span>
+          <span className="text-[10px] text-white/35 ml-1 mt-0.5">({value}×{faceValue})</span>
         </div>
       )}
     </div>
@@ -212,7 +212,7 @@ export default function App() {
               {players.map((name, pi) => (
                 <th key={pi} colSpan={2}
                     className="text-center px-1 pt-3 pb-1">
-                  <span className="block text-xs font-bold text-amber-300 uppercase tracking-wider truncate max-w-[110px] mx-auto">
+                  <span className="block text-sm font-bold text-amber-300 uppercase tracking-wider truncate max-w-[120px] mx-auto">
                     {name}
                   </span>
                 </th>
@@ -226,7 +226,7 @@ export default function App() {
               {players.map((_, pi) =>
                 SUBTYPES.map(sub => (
                   <th key={`${pi}-${sub}`}
-                      className={`text-center px-1 pb-2 text-[10px] font-bold uppercase tracking-wider w-14 min-w-[48px] ${sub === 'Opc' ? 'text-sky-400' : 'text-emerald-400'}`}>
+                      className={`text-center px-1 pb-2 text-xs font-bold uppercase tracking-wider w-16 min-w-[56px] ${sub === 'Opc' ? 'text-sky-400' : 'text-emerald-400'}`}>
                     {sub === 'Opc' ? 'Opcional' : 'Obligado'}
                   </th>
                 ))
@@ -241,8 +241,8 @@ export default function App() {
                 {/* Row label */}
                 <td className="sticky left-0 z-10 bg-inherit px-2 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-black text-amber-300">{row.label}</span>
-                    <span className="text-[10px] text-white/40 font-medium">({row.value})</span>
+                    <span className="text-base font-black text-amber-300">{row.label}</span>
+                    <span className="text-xs text-white/40 font-medium">({row.value})</span>
                   </div>
                 </td>
 
@@ -269,7 +269,7 @@ export default function App() {
                 const total = playerTotal(scores, pi)
                 return (
                   <td key={pi} colSpan={2} className="text-center px-1 py-3 bg-slate-800">
-                    <span className={`text-lg font-black tabular-nums ${total > 0 ? 'text-amber-300' : 'text-white/40'}`}>
+                    <span className={`text-xl font-black tabular-nums ${total > 0 ? 'text-amber-300' : 'text-white/40'}`}>
                       {total || '—'}
                     </span>
                   </td>
