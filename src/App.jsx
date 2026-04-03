@@ -309,12 +309,12 @@ export default function App() {
       </header>
 
       {/* Scrollable table area */}
-      <div className="overflow-x-auto pb-6 flex justify-center">
-        <table className="border-separate border-spacing-0 mx-auto" style={{ minWidth: `${Math.max(320, 80 + numPlayers * 120)}px`, width: `${Math.max(320, 80 + numPlayers * 120)}px` }}>
+      <div className="overflow-x-auto pb-6">
+        <table className="border-separate border-spacing-0 w-full" style={{ minWidth: `${Math.max(320, 80 + numPlayers * 120)}px` }}>
           <thead>
             {/* Player name row */}
             <tr>
-              <th className="sticky left-0 z-20 bg-slate-900 w-10 min-w-[40px]" />
+              <th className="sticky left-0 z-20 bg-slate-900 w-12 min-w-[48px]" />
               {players.map((name, pi) => (
                 <th key={pi} colSpan={2}
                     className="text-center px-1 pt-3 pb-1">
@@ -326,7 +326,7 @@ export default function App() {
             </tr>
             {/* L / O sub-header row */}
             <tr>
-              <th className="sticky left-0 z-20 bg-slate-900 text-left px-2 py-1 text-[10px] text-white/40 font-medium uppercase">
+              <th className="sticky left-0 z-20 bg-slate-900 text-left px-2 py-1 text-[10px] text-white/40 font-medium uppercase w-12 min-w-[48px]">
                 Cara
               </th>
               {players.map((_, pi) =>
@@ -345,7 +345,7 @@ export default function App() {
               <tr key={row.id}
                   className={ri % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
                 {/* Row label */}
-                <td className="sticky left-0 z-10 bg-inherit px-2 py-2 whitespace-nowrap">
+                <td className={`sticky left-0 z-10 px-2 py-2 whitespace-nowrap ${ri % 2 === 0 ? 'bg-slate-800' : 'bg-slate-900'}`}>
                   <div className="flex flex-col items-center gap-0.5">
                     {ROW_ICONS[row.id]}
                     <span className="text-[10px] text-white/40 font-medium">({row.value})</span>
