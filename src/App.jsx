@@ -1,4 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+// ─── Persistencia localStorage ─────────────────────────────────────────────
+
+const STORAGE_KEY = 'dados-scorer-state'
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
+}
+
+function saveState(players, scores) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ players, scores }))
+  } catch {}
+}
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -213,10 +231,22 @@ function PlayersModal({ players, onSave, onClose }) {
 // ─── Main App ──────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [players, setPlayers] = useState(DEFAULT_PLAYERS)
-  const [scores, setScores] = useState(() => emptyScores(DEFAULT_PLAYERS))
+  const [players, setPlayers] = useState(() => {
+    const saved = loadState()
+    return saved?.players ?? DEFAULT_PLAYERS
+  })
+  const [scores, setScores] = useState(() => {
+    const saved = loadState()
+    if (saved?.scores) return saved.scores
+    return emptyScores(DEFAULT_PLAYERS)
+  })
   const [showPlayers, setShowPlayers] = useState(false)
   const [showReset, setShowReset] = useState(false)
+
+  // Guardar en localStorage cada vez que cambie players o scores
+  useEffect(() => {
+    saveState(players, scores)
+  }, [players, scores])
 
   function updateScore(pi, rowId, sub, val) {
     setScores(prev => ({
