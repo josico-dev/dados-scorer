@@ -5,15 +5,15 @@ import { useState } from 'react'
 const DEFAULT_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 const ROWS = [
-  { id: 'as',           label: 'As',            emoji: '🎲', color: 'text-amber-300' },
-  { id: 'k',            label: 'K',             emoji: '🎲', color: 'text-amber-300' },
-  { id: 'q',            label: 'Q',             emoji: '🎲', color: 'text-amber-300' },
-  { id: 'j',            label: 'J',             emoji: '🎲', color: 'text-amber-300' },
-  { id: 'seis_rojo',    label: '6',             emoji: '🔴', color: 'text-red-400'   },
-  { id: 'cinco_negro',  label: '5',             emoji: '⚫', color: 'text-gray-300'  },
+  { id: 'as', label: 'AS', value: 6 },
+  { id: 'k',  label: 'K',  value: 5 },
+  { id: 'q',  label: 'Q',  value: 4 },
+  { id: 'j',  label: 'J',  value: 3 },
+  { id: 'vi', label: 'VI', value: 2 },
+  { id: 'v',  label: 'V',  value: 1 },
 ]
 
-const SUBTYPES = ['L', 'O']   // Libre, Obligatorio
+const SUBTYPES = ['Opc', 'Obl']   // Opcional, Obligado
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -210,8 +210,8 @@ export default function App() {
               {players.map((_, pi) =>
                 SUBTYPES.map(sub => (
                   <th key={`${pi}-${sub}`}
-                      className={`text-center px-1 pb-2 text-[10px] font-bold uppercase tracking-wider w-14 min-w-[48px] ${sub === 'L' ? 'text-sky-400' : 'text-emerald-400'}`}>
-                    {sub === 'L' ? 'Libre' : 'Oblig.'}
+                      className={`text-center px-1 pb-2 text-[10px] font-bold uppercase tracking-wider w-14 min-w-[48px] ${sub === 'Opc' ? 'text-sky-400' : 'text-emerald-400'}`}>
+                    {sub === 'Opc' ? 'Opcional' : 'Obligado'}
                   </th>
                 ))
               )}
@@ -224,11 +224,10 @@ export default function App() {
                   className={ri % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
                 {/* Row label */}
                 <td className="sticky left-0 z-10 bg-inherit px-2 py-2 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <span className="text-base">{row.emoji}</span>
-                    <span className={`text-sm font-bold ${row.color}`}>{row.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-black text-amber-300">{row.label}</span>
+                    <span className="text-[10px] text-white/40 font-medium">({row.value})</span>
                   </div>
-                  <div className="text-[9px] text-white/30 leading-none mt-0.5 ml-0.5">{row.id.includes('rojo') ? 'Rojo' : row.id.includes('negro') ? 'Negro' : ''}</div>
                 </td>
 
                 {players.map((_, pi) =>
@@ -266,8 +265,9 @@ export default function App() {
 
       {/* Legend */}
       <div className="px-4 pb-8 flex gap-4 justify-center text-[11px] text-white/40">
-        <span><span className="text-sky-400 font-bold">L</span> = Libre</span>
-        <span><span className="text-emerald-400 font-bold">O</span> = Obligatorio</span>
+        <span><span className="text-sky-400 font-bold">Opc</span> = Opcional</span>
+        <span><span className="text-emerald-400 font-bold">Obl</span> = Obligado</span>
+        <span className="text-white/25">· número entre paréntesis = valor de la cara</span>
       </div>
 
       {/* Modals */}
