@@ -5,12 +5,12 @@ import { useState } from 'react'
 const DEFAULT_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 const ROWS = [
-  { id: 'as', label: 'AS', symbol: '♠️', value: 6 },
-  { id: 'k',  label: 'K',  symbol: '👑', value: 5 },
-  { id: 'q',  label: 'Q',  symbol: '👸', value: 4 },
-  { id: 'j',  label: 'J',  symbol: '🃏', value: 3 },
-  { id: 'vi', label: 'VI', symbol: '🔴', value: 2 },
-  { id: 'v',  label: 'V',  symbol: '⚫', value: 1 },
+  { id: 'as', label: 'AS', value: 6 },
+  { id: 'k',  label: 'K',  value: 5 },
+  { id: 'q',  label: 'Q',  value: 4 },
+  { id: 'j',  label: 'J',  value: 3 },
+  { id: 'vi', label: 'VI', value: 2 },
+  { id: 'v',  label: 'V',  value: 1 },
 ]
 
 const SUBTYPES = ['Opc', 'Obl']   // Opcional, Obligado
@@ -34,6 +34,96 @@ function playerTotal(scores, pi) {
     const obl = parseFloat(scores[pi]?.[r.id]?.Obl) || 0
     return acc + (opc + obl) * r.value
   }, 0)
+}
+
+// ─── Dice SVG Icons ────────────────────────────────────────────────────────
+
+function DiceAs() {
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
+      {/* Spade */}
+      <path d="M24 8 C18 14 12 16 12 22 C12 26 15 28 18 27 C16 30 15 32 13 34 H35 C33 32 32 30 30 27 C33 28 36 26 36 22 C36 16 30 14 24 8Z" fill="#f59e0b"/>
+      <text x="24" y="45" textAnchor="middle" fontSize="7" fill="#f59e0b" fontWeight="bold" fontFamily="serif">A</text>
+    </svg>
+  )
+}
+
+function DiceK() {
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
+      {/* Crown */}
+      <path d="M10 34 L10 20 L18 28 L24 14 L30 28 L38 20 L38 34 Z" fill="#f59e0b"/>
+      <rect x="10" y="34" width="28" height="4" rx="2" fill="#f59e0b"/>
+    </svg>
+  )
+}
+
+function DiceQ() {
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
+      {/* Flower / Queen symbol */}
+      <circle cx="24" cy="18" r="6" fill="#f59e0b"/>
+      <circle cx="15" cy="26" r="5" fill="#f59e0b"/>
+      <circle cx="33" cy="26" r="5" fill="#f59e0b"/>
+      <circle cx="24" cy="30" r="5" fill="#f59e0b"/>
+      <circle cx="24" cy="22" r="4" fill="#1e293b"/>
+      <text x="24" y="27" textAnchor="middle" fontSize="9" fill="#f59e0b" fontWeight="bold" fontFamily="serif">Q</text>
+    </svg>
+  )
+}
+
+function DiceJ() {
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#f59e0b" strokeWidth="2.5"/>
+      {/* Jester hat */}
+      <path d="M16 36 L16 20 Q16 10 24 10 Q32 10 32 20 L32 36 Z" fill="#f59e0b"/>
+      <circle cx="16" cy="19" r="5" fill="#fcd34d"/>
+      <circle cx="32" cy="19" r="5" fill="#fcd34d"/>
+      <text x="24" y="32" textAnchor="middle" fontSize="11" fill="#1e293b" fontWeight="bold" fontFamily="serif">J</text>
+    </svg>
+  )
+}
+
+function DiceSix() {
+  // 6 puntos rojos
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#ef4444" strokeWidth="2.5"/>
+      <circle cx="15" cy="13" r="4" fill="#ef4444"/>
+      <circle cx="33" cy="13" r="4" fill="#ef4444"/>
+      <circle cx="15" cy="24" r="4" fill="#ef4444"/>
+      <circle cx="33" cy="24" r="4" fill="#ef4444"/>
+      <circle cx="15" cy="35" r="4" fill="#ef4444"/>
+      <circle cx="33" cy="35" r="4" fill="#ef4444"/>
+    </svg>
+  )
+}
+
+function DiceFive() {
+  // 5 puntos negros (gris oscuro sobre fondo oscuro)
+  return (
+    <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#94a3b8" strokeWidth="2.5"/>
+      <circle cx="15" cy="15" r="4" fill="#94a3b8"/>
+      <circle cx="33" cy="15" r="4" fill="#94a3b8"/>
+      <circle cx="24" cy="24" r="4" fill="#94a3b8"/>
+      <circle cx="15" cy="33" r="4" fill="#94a3b8"/>
+      <circle cx="33" cy="33" r="4" fill="#94a3b8"/>
+    </svg>
+  )
+}
+
+const ROW_ICONS = {
+  as: <DiceAs />,
+  k:  <DiceK />,
+  q:  <DiceQ />,
+  j:  <DiceJ />,
+  vi: <DiceSix />,
+  v:  <DiceFive />,
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -240,9 +330,9 @@ export default function App() {
                   className={ri % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
                 {/* Row label */}
                 <td className="sticky left-0 z-10 bg-inherit px-2 py-2 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-2xl leading-none">{row.symbol}</span>
-                  <span className="text-xs text-white/40 font-medium">({row.value})</span>
+                  <div className="flex flex-col items-center gap-0.5">
+                    {ROW_ICONS[row.id]}
+                    <span className="text-[10px] text-white/40 font-medium">({row.value})</span>
                   </div>
                 </td>
 
