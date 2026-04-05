@@ -9,13 +9,19 @@
   }
 
   body, #root {
-    height: 100dvh;
+    /* svh = small viewport height (con todas las barras visibles) — el más conservador */
+    /* Fallback en cascada para browsers sin soporte */
+    height: 100vh;
+    height: 100svh;
+    height: var(--app-height, 100svh); /* JS calcula el valor real con visualViewport */
     overflow: hidden;
   }
 
   /* Shell principal de la app — misma altura en todos los dispositivos */
   .app-shell {
-    height: 100dvh;
+    height: 100vh;
+    height: 100svh;
+    height: var(--app-height, 100svh);
     display: flex;
     flex-direction: column;
     overflow: hidden;

@@ -22,6 +22,19 @@
           navigator.serviceWorker.register('/sw.js')
         })
       }
+
+      // --app-height: altura real del viewport visible en cualquier navegador/dispositivo.
+      // Cubre: Android gesture nav, Android 3 botones, iOS notch, iOS home indicator,
+      // Chrome mobile con/sin barra de dirección visible.
+      function setAppHeight() {
+        const h = window.visualViewport ? window.visualViewport.height : window.innerHeight
+        document.documentElement.style.setProperty('--app-height', h + 'px')
+      }
+      setAppHeight()
+      window.addEventListener('resize', setAppHeight)
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppHeight)
+      }
     </script>
   </body>
 </html>
