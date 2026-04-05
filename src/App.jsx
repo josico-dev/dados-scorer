@@ -57,18 +57,18 @@ export default function App() {
 
   function ModeToggle() {
     return (
-      <div className="flex bg-white/10 rounded-lg p-0.5 gap-0.5">
+      <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
         {[
-          { id: 'dados',      label: '🃏 Dados' },
-          { id: 'dice-party', label: '🎲 Dice Party' },
+          { id: 'dados',      label: '🃏 Dados',      active: 'from-amber-500 to-orange-500' },
+          { id: 'dice-party', label: '🎲 Dice Party', active: 'from-violet-500 to-indigo-500' },
         ].map(m => (
           <button
             key={m.id}
             onClick={() => setMode(m.id)}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+            className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
               mode === m.id
-                ? 'bg-amber-500 text-black shadow'
-                : 'text-white/50 hover:text-white/80'
+                ? `bg-gradient-to-r ${m.active} text-white shadow-lg`
+                : 'text-white/40 hover:text-white/70'
             }`}
           >
             {m.label}
@@ -85,8 +85,8 @@ export default function App() {
 
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
-    <div className="app-shell bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
-      <header className="shrink-0 bg-slate-900/80 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
+    <div className="app-shell text-white select-none" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #0a0f2e 40%, #060d1f 100%)' }}>
+      <header className="shrink-0 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2" style={{ background: 'rgba(10,8,30,0.85)' }}>
         <span className="text-xl">🎲</span>
         <ModeToggle />
         <div className="flex gap-1.5">

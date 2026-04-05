@@ -1,5 +1,5 @@
 // ─── Componente SVG de un dado ─────────────────────────────────────────────
-// Cada dado tiene un color propio y animación de giro al lanzar.
+// El color depende del VALOR de la cara (1=rojo, 2=amarillo, 3=azul, 4=verde, 5=morado, 6=celeste)
 
 import { useState, useEffect } from 'react'
 
@@ -12,30 +12,28 @@ const PIP_POSITIONS = {
   6: [[18, 15], [42, 15], [18, 30], [42, 30], [18, 45], [42, 45]],
 }
 
-// Color de cada dado por índice (0–5): rojo, amarillo, azul, verde, morado, celeste
-const DIE_COLORS = [
-  { bg: '#3b1212', border: '#ef4444', pip: '#fca5a5' }, // 0 → rojo
-  { bg: '#2e2500', border: '#eab308', pip: '#fde047' }, // 1 → amarillo
-  { bg: '#1e3a5f', border: '#3b82f6', pip: '#93c5fd' }, // 2 → azul
-  { bg: '#1a3320', border: '#22c55e', pip: '#86efac' }, // 3 → verde
-  { bg: '#2d1f3d', border: '#a855f7', pip: '#d8b4fe' }, // 4 → morado
-  { bg: '#0e2e38', border: '#06b6d4', pip: '#67e8f9' }, // 5 → celeste
-]
+// Color por VALOR de la cara
+export const FACE_COLORS = {
+  1: { bg: '#3b0f0f', border: '#ef4444', pip: '#fca5a5', glow: '#ef444488' }, // rojo
+  2: { bg: '#2e2200', border: '#eab308', pip: '#fde047', glow: '#eab30888' }, // amarillo
+  3: { bg: '#0f1f3b', border: '#3b82f6', pip: '#93c5fd', glow: '#3b82f688' }, // azul
+  4: { bg: '#0f2e1a', border: '#22c55e', pip: '#86efac', glow: '#22c55e88' }, // verde
+  5: { bg: '#1f0f3b', border: '#a855f7', pip: '#d8b4fe', glow: '#a855f788' }, // morado
+  6: { bg: '#0a2530', border: '#06b6d4', pip: '#67e8f9', glow: '#06b6d488' }, // celeste
+  0: { bg: '#1e293b', border: '#475569', pip: '#94a3b8', glow: '#47556944' }, // sin valor
+}
 
-// Cuando está bloqueado todos se vuelven dorados
-const LOCKED = { bg: '#1e1a0e', border: '#f59e0b', pip: '#fcd34d' }
+export const LOCKED_COLORS = { bg: '#1e1a0e', border: '#f59e0b', pip: '#fcd34d', glow: '#f59e0b99' }
 
-export default function Die({ value, locked, rolling, onClick, className = '', size = 64, index = 0 }) {
+export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
   const [animKey, setAnimKey] = useState(0)
 
-  // Reinicia la animación en cada tirada (solo si no está bloqueado)
   useEffect(() => {
     if (rolling && !locked) setAnimKey(k => k + 1)
   }, [rolling, locked])
 
   const pips   = value >= 1 && value <= 6 ? PIP_POSITIONS[value] : []
-  const colors = locked ? LOCKED : DIE_COLORS[index % DIE_COLORS.length]
-  const { bg, border, pip } = colors
+  const colors = locked ? LOCKED_COLORS : (FACE_COLORS[value] ?? FACE_COLORS[0])
 
   return (
     <button
@@ -52,44 +50,38 @@ export default function Die({ value, locked, rolling, onClick, className = '', s
         className={rolling && !locked ? 'die-spinning' : ''}
         style={{
           display: 'block',
-          filter: `drop-shadow(0 0 ${locked ? 8 : 5}px ${border}${locked ? '99' : '66'})`,
-          transition: 'filter 0.2s',
+          filter: `drop-shadow(0 0 ${locked ? 10 : 6}px ${colors.glow})`,
+          transition: 'filter 0.3s',
         }}
       >
-        {/* Sombra interior */}
         <defs>
-          <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
+          <linearGradient id={`g-${value}-${locked}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
           </linearGradient>
         </defs>
 
-        {/* Fondo del dado */}
-        <rect x="3" y="3" width="54" height="54" rx="11"
-          fill={bg} stroke={border} strokeWidth="3" />
-
-        {/* Brillo superior */}
-        <rect x="3" y="3" width="54" height="54" rx="11"
-          fill={`url(#grad-${index})`} />
+        {/* Fondo */}
+        <rect x="3" y="3" width="54" height="54" rx="12"
+          fill={colors.bg} stroke={colors.border} strokeWidth="3.5" />
+        {/* Brillo */}
+        <rect x="3" y="3" width="54" height="54" rx="12"
+          fill={`url(#g-${value}-${locked})`} />
 
         {/* Pips */}
         {pips.map(([cx, cy], i) => (
-          <circle key={i} cx={cx} cy={cy} r="5.5" fill={pip} />
+          <circle key={i} cx={cx} cy={cy} r="5.5" fill={colors.pip} />
         ))}
 
-        {/* Si no hay valor todavía */}
         {!value && (
           <text x="30" y="38" textAnchor="middle" fontSize="22"
-            fill={border} fontWeight="bold" opacity="0.5">?</text>
+            fill="#475569" fontWeight="bold">?</text>
         )}
       </svg>
 
-      {/* Indicador de bloqueado */}
       {locked && (
         <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow-lg"
-          style={{ fontSize: 10, color: '#000' }}>
-          🔒
-        </div>
+          style={{ fontSize: 10, color: '#000' }}>🔒</div>
       )}
     </button>
   )

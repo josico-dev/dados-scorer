@@ -1,7 +1,7 @@
 // ─── Modo Dice Party (estilo Yahtzee) ──────────────────────────────────────
 
 import { useState, useEffect, useCallback } from 'react'
-import Die from '../diceParty/Die'
+import Die, { FACE_COLORS } from '../diceParty/Die'
 import { UPPER_COMBOS, LOWER_COMBOS, ALL_COMBOS } from '../diceParty/combinations'
 import { calcPotential, detectJoker, calcUpperSum, calcTotal } from '../diceParty/scoring'
 import PlayersModal from '../PlayersModal'
@@ -163,10 +163,10 @@ export default function DicePartyMode({ modeToggle }) {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="app-shell bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
+    <div className="app-shell text-white select-none" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #0a0f2e 40%, #060d1f 100%)' }}>
 
       {/* Header */}
-      <header className="shrink-0 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
+      <header className="shrink-0 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2" style={{ background: 'rgba(10,8,30,0.85)' }}>
         <span className="text-xl">🎲</span>
         {modeToggle}
         <div className="flex items-center gap-1.5">
@@ -227,11 +227,13 @@ export default function DicePartyMode({ modeToggle }) {
           {/* Botones */}
           <div className="flex gap-2">
             <button onClick={handleRoll} disabled={!canRoll}
-              className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
+              className="flex-1 py-3 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
+              style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
               🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
             </button>
             <button onClick={handlePlay} disabled={!canPlay}
-              className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
+              className="flex-1 py-3 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
+              style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
               ✅ JUGAR
             </button>
           </div>
@@ -343,7 +345,7 @@ function Scorecard({
   const gridCols = `1fr ${players.map(() => `${colPx}px`).join(' ')}`
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-800/60">
+    <div className="rounded-2xl overflow-hidden border border-indigo-500/20" style={{ background: "rgba(15,12,40,0.85)" }}>
 
       {/* Cabecera */}
       <div className="grid items-center bg-slate-700/60 border-b border-white/10"
@@ -473,11 +475,12 @@ const MINI_PIPS = {
 }
 
 function MiniDie({ value }) {
+  const c = FACE_COLORS[value] ?? FACE_COLORS[0]
   return (
-    <svg viewBox="0 0 16 16" width="14" height="14" style={{ flexShrink: 0 }}>
-      <rect x="1" y="1" width="14" height="14" rx="3" fill="#1e293b" stroke="#f59e0b" strokeWidth="1.5"/>
+    <svg viewBox="0 0 16 16" width="16" height="16" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="14" height="14" rx="3" fill={c.bg} stroke={c.border} strokeWidth="1.5"/>
       {(MINI_PIPS[value] || []).map(([cx,cy],i) => (
-        <circle key={i} cx={cx} cy={cy} r="1.4" fill="#f59e0b"/>
+        <circle key={i} cx={cx} cy={cy} r="1.5" fill={c.pip}/>
       ))}
     </svg>
   )
