@@ -28,8 +28,10 @@ export default function App() {
   const [showResetModal,   setShowResetModal]   = useState(false)
   const [showDiceRoller,   setShowDiceRoller]   = useState(false)
   // Estado de los dados compartido con el tablero
-  const [rollerDice,     setRollerDice]     = useState(Array(5).fill(0))
+  const [rollerDice,      setRollerDice]      = useState(Array(5).fill(0))
   const [rollerHasRolled, setRollerHasRolled] = useState(false)
+  const [currentPlayer,   setCurrentPlayer]   = useState(0)
+  const [rollerReset,     setRollerReset]     = useState(0) // incrementar fuerza reset del roller
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
@@ -157,12 +159,21 @@ export default function App() {
           onResetScores={resetScores}
           diceActive={showDiceRoller && rollerHasRolled}
           rollerDice={rollerDice}
+          currentPlayer={currentPlayer}
+          onPlay={(pi, rowId, subId, value) => {
+            updateScore(pi, rowId, subId, String(value))
+            // Avanzar al siguiente jugador
+            setCurrentPlayer(prev => (prev + 1) % players.length)
+            // Resetear los dados
+            setRollerReset(r => r + 1)
+          }}
         />
         {showDiceRoller && (
           <div className="shrink-0 safe-bottom">
             <DiceRoller
               theme={theme}
               isDark={isDark}
+              resetKey={rollerReset}
               onDiceChange={(dice, hasRolled) => {
                 setRollerDice(dice)
                 setRollerHasRolled(hasRolled)

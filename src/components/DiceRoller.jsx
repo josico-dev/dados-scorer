@@ -65,7 +65,7 @@ function NormalDie({ value, locked, rolling, onClick }) {
   )
 }
 
-export default function DiceRoller({ theme, isDark, onDiceChange }) {
+export default function DiceRoller({ theme, isDark, onDiceChange, resetKey }) {
   const [dice,      setDice]      = useState(Array(NUM_DICE).fill(0))
   const [locked,    setLocked]    = useState(Array(NUM_DICE).fill(false))
   const [rolling,   setRolling]   = useState(false)
@@ -79,6 +79,14 @@ export default function DiceRoller({ theme, isDark, onDiceChange }) {
   useEffect(() => {
     onDiceChange?.(dice, hasRolled)
   }, [dice, hasRolled])
+
+  // Reset externo (cuando el padre confirma una jugada)
+  useEffect(() => {
+    if (resetKey === 0) return
+    setDice(Array(NUM_DICE).fill(0))
+    setLocked(Array(NUM_DICE).fill(false))
+    setRollCount(0)
+  }, [resetKey])
 
   function handleRoll() {
     if (rolling || rollsLeft <= 0) return

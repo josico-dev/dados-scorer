@@ -8,59 +8,69 @@ import ScoreCell from '../ScoreCell'
 import PlayersModal from '../PlayersModal'
 import ResetModal from '../ResetModal'
 
-// Mapeo de id de fila → valor de cara del dado (para calcular sugerencia)
-// AS=6, K=5, Q=4, J=3, VI=2, V=1 — coincide con el número de pips del dado
 const ROW_DICE_VALUE = { as: 6, k: 5, q: 4, j: 3, vi: 2, v: 1 }
 
-/**
- * Calcula cuántos dados son válidos para una fila, teniendo en cuenta que
- * el AS (dado mostrando 6) es comodín y cuenta para cualquier fila.
- * Devuelve el número de dados a apuntar (la celda multiplica por el valor de cara).
- */
+// AS (valor 6) es comodín — cuenta para cualquier fila excepto la del propio AS
 function suggestDice(rowId, rollerDice) {
-  const faceNum = ROW_DICE_VALUE[rowId]
-  const AS_VALUE = 6  // el AS en el dado
-
-  return rollerDice.filter(d => {
-    if (d === faceNum) return true                      // dado exacto de esa cara
-    if (d === AS_VALUE && rowId !== 'as') return true   // AS comodín (menos en la fila del AS)
-    return false
-  }).length
+  const faceNum  = ROW_DICE_VALUE[rowId]
+  const AS_VALUE = 6
+  return rollerDice.filter(d =>
+    d === faceNum || (d === AS_VALUE && rowId !== 'as')
+  ).length
 }
 
 export default function DadosMode({
   theme, isDark,
   players, scores, showPlayersModal, showResetModal,
-  onUpdateScore, onOpenPlayers, onOpenReset,
-  onClosePlayers, onCloseReset, onSavePlayers, onResetScores,
-  diceActive, rollerDice,
+  onUpdateScore, onClosePlayers, onCloseReset, onSavePlayers, onResetScores,
+  diceActive, rollerDice, currentPlayer, onPlay,
 }) {
   const t = theme ?? {}
 
-  // Estado para saber qué celda tiene una sugerencia seleccionada (pi-rowId-subId)
-  // null = ninguna seleccionada
-  const [pendingCell, setPendingCell] = useState(null)
-
-  // Cuando los dados cambian o se desactivan, limpia la selección
-  // (lo gestiona el usuario)
+  // Celda seleccionada para confirmar: { pi, rowId, subId, value }
+  const [selected, setSelected] = useState(null)
 
   function handleCellClick(pi, rowId, subId) {
-    if (!diceActive) return // sin dados activos → comportamiento normal
-    const suggested = suggestDice(rowId, rollerDice)
-    if (suggested === 0) return // ningún dado de esa cara
-    const key = `${pi}-${rowId}-${subId}`
-    if (pendingCell === key) {
-      // Segundo clic → apuntar
-      onUpdateScore(pi, rowId, subId, String(suggested))
-      setPendingCell(null)
-    } else {
-      // Primer clic → seleccionar
-      setPendingCell(key)
-    }
+    if (!diceActive) return
+    if (pi !== currentPlayer) return  // solo puede jugar el jugador actual
+    const count = suggestDice(rowId, rollerDice)
+    if (count === 0) return
+    const value = count * ROW_DICE_VALUE[rowId]
+    setSelected({ pi, rowId, subId, value })
   }
+
+  function handlePlay() {
+    if (!selected) return
+    onPlay(selected.pi, selected.rowId, selected.subId, selected.value)
+    setSelected(null)
+  }
+
+  function cellKey(pi, rowId, subId) { return `${pi}-${rowId}-${subId}` }
 
   return (
     <>
+      {/* Banner de turno + botón JUGAR (solo en modo dados activo) */}
+      {diceActive && (
+        <div className="flex items-center justify-between px-3 py-2 gap-2"
+          style={{ background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.08)', borderBottom: `1px solid ${isDark ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.15)'}` }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold" style={{ color: '#a78bfa' }}>
+              🎲 Turno de:
+            </span>
+            <span className="text-sm font-black" style={{ color: '#f1f5f9' }}>
+              {players[currentPlayer]}
+            </span>
+          </div>
+          <button
+            onClick={handlePlay}
+            disabled={!selected}
+            className="px-4 py-1.5 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
+            style={{ background: selected ? 'linear-gradient(135deg,#22c55e,#06b6d4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: selected ? '#000' : (t.textMuted ?? '#6b7280') }}>
+            ✅ JUGAR
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto safe-bottom">
         <table
           className="border-separate border-spacing-0 w-full"
@@ -73,8 +83,8 @@ export default function DadosMode({
               {players.map((name, i) => (
                 <th key={i} colSpan={2} className="text-center px-1 pt-2 pb-1">
                   <span className="block text-xs font-bold uppercase tracking-wider truncate max-w-[120px] mx-auto"
-                    style={{ color: '#a78bfa' }}>
-                    {name}
+                    style={{ color: diceActive && i === currentPlayer ? '#f59e0b' : '#a78bfa' }}>
+                    {name}{diceActive && i === currentPlayer ? ' ←' : ''}
                   </span>
                 </th>
               ))}
@@ -98,12 +108,11 @@ export default function DadosMode({
 
           <tbody>
             {ROWS.map((row, rowIndex) => {
-              // Puntuación sugerida para esta fila (número de dados de esa cara)
               const suggested = diceActive ? suggestDice(row.id, rollerDice) : 0
+              const suggestedPts = suggested * row.value
 
               return (
                 <tr key={row.id} style={{ background: rowIndex % 2 === 0 ? t.rowEven : t.rowOdd }}>
-                  {/* Icono de la cara */}
                   <td className="sticky left-0 z-10 px-1 py-0.5 whitespace-nowrap"
                     style={{ background: rowIndex % 2 === 0 ? (isDark ? '#12102a' : '#eef0fa') : (isDark ? '#0d0b22' : '#f5f7ff') }}>
                     <div className="flex flex-col items-center">
@@ -112,33 +121,31 @@ export default function DadosMode({
                     </div>
                   </td>
 
-                  {/* Celdas de puntuación */}
                   {players.map((_, pi) =>
                     SUBTYPES.map(sub => {
-                      const key = `${pi}-${row.id}-${sub.id}`
-                      const isPending = pendingCell === key
-                      const hasSuggestion = diceActive && suggested > 0
+                      const key      = cellKey(pi, row.id, sub.id)
+                      const isMe     = diceActive && pi === currentPlayer
+                      const hasSugg  = isMe && suggested > 0
+                      const isSel    = selected && cellKey(selected.pi, selected.rowId, selected.subId) === key
 
                       return (
                         <td key={`${pi}-${sub.id}`} className="px-1 py-1">
-                          {hasSuggestion ? (
-                            // Modo dados activo: celda clicable con sugerencia
+                          {hasSugg ? (
                             <button
                               onClick={() => handleCellClick(pi, row.id, sub.id)}
                               className="w-full rounded-xl py-3 px-1 text-center text-sm font-bold transition-all active:scale-95"
                               style={{
-                                background: isPending
+                                background: isSel
                                   ? 'linear-gradient(135deg,#7c3aed,#4f46e5)'
                                   : (isDark ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.1)'),
-                                border: isPending
+                                border: isSel
                                   ? '2px solid #a78bfa'
                                   : `1px solid ${isDark ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.25)'}`,
-                                color: isPending ? '#fff' : '#a78bfa',
+                                color: isSel ? '#fff' : '#a78bfa',
                               }}>
-                              {isPending ? `✓ ${suggested * row.value} pts` : `${suggested * row.value}`}
+                              {suggestedPts}
                             </button>
                           ) : (
-                            // Modo normal: input editable
                             <ScoreCell
                               theme={theme}
                               isDark={isDark}
@@ -155,7 +162,6 @@ export default function DadosMode({
               )
             })}
 
-            {/* Total */}
             <tr style={{ borderTop: '2px solid rgba(167,139,250,0.3)' }}>
               <td className="sticky left-0 z-10 px-2 py-2 text-center"
                 style={{ background: isDark ? '#12102a' : '#e8ecf8' }}>
