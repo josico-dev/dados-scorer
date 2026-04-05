@@ -1,27 +1,103 @@
 // ─── Lanzador de dados para el modo normal ────────────────────────────────
-//
-// Panel opcional con 5 dados que se pueden lanzar y bloquear.
-// El usuario puede mostrarlo u ocultarlo con un botón en el header.
+// Los dados muestran las caras propias del juego: V(1), VI(2), J(3), Q(4), K(5), AS(6)
 
-import { useState } from 'react'
-import Die from '../diceParty/Die'
+import { useState, useEffect } from 'react'
+import { FACE_COLORS } from '../diceParty/Die'
 
-const NUM_DICE = 5
+const NUM_DICE  = 5
+const MAX_ROLLS = 3
+
+// Caras del dado en el modo normal (valor → etiqueta)
+const FACE_LABELS = { 1: 'V', 2: 'VI', 3: 'J', 4: 'Q', 5: 'K', 6: 'AS' }
+// AS tiene un punto rojo en lugar de letra
+const FACE_AS_DOT = 6
 
 function rollDice(dice, locked) {
   return dice.map((d, i) => locked[i] ? d : Math.ceil(Math.random() * 6))
 }
 
-const MAX_ROLLS = 3
+// Dado SVG con etiqueta del modo normal
+function NormalDie({ value, locked, rolling, onClick }) {
+  const [animKey, setAnimKey] = useState(0)
 
-export default function DiceRoller() {
+  useEffect(() => {
+    if (rolling && !locked) setAnimKey(k => k + 1)
+  }, [rolling, locked])
+
+  const colors = locked
+    ? { bg: '#1e293b', border: '#ffffff', pip: '#ffffff', glow: '#ffffff99' }
+    : (FACE_COLORS[value] ?? FACE_COLORS[0])
+
+  const size = 58
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative touch-manipulation select-none focus:outline-none"
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+    >
+      <svg
+        key={animKey}
+        viewBox="0 0 60 60"
+        width={size}
+        height={size}
+        className={rolling && !locked ? 'die-spinning' : ''}
+        style={{
+          display: 'block',
+          filter: `drop-shadow(0 0 ${locked ? 8 : 5}px ${colors.glow ?? colors.border + '88'})`,
+          transition: 'filter 0.2s',
+        }}
+      >
+        <defs>
+          <linearGradient id={`ng-${value}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
+          </linearGradient>
+        </defs>
+        <rect x="3" y="3" width="54" height="54" rx="12"
+          fill={colors.bg} stroke={colors.border} strokeWidth="3.5" />
+        <rect x="3" y="3" width="54" height="54" rx="12"
+          fill={`url(#ng-${value})`} />
+
+        {value === FACE_AS_DOT ? (
+          // AS → punto central grande
+          <circle cx="30" cy="30" r="10" fill={colors.pip ?? colors.border} />
+        ) : value >= 1 ? (
+          // Resto → letra de la cara
+          <text
+            x="30" y="36"
+            textAnchor="middle"
+            fontSize={value === 2 ? 16 : 20}
+            fill={colors.pip ?? colors.border}
+            fontWeight="900"
+            fontFamily="system-ui, sans-serif"
+          >
+            {FACE_LABELS[value]}
+          </text>
+        ) : (
+          // Sin lanzar → ?
+          <text x="30" y="38" textAnchor="middle" fontSize="22"
+            fill={colors.border} fontWeight="bold" opacity="0.4">?</text>
+        )}
+      </svg>
+
+      {locked && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center shadow"
+          style={{ fontSize: 8, color: '#000' }}>🔒</div>
+      )}
+    </button>
+  )
+}
+
+export default function DiceRoller({ theme, isDark }) {
   const [dice,      setDice]      = useState(Array(NUM_DICE).fill(0))
   const [locked,    setLocked]    = useState(Array(NUM_DICE).fill(false))
   const [rolling,   setRolling]   = useState(false)
-  const [rollCount, setRollCount] = useState(0) // 0 = sin lanzar
+  const [rollCount, setRollCount] = useState(0)
 
   const hasRolled = rollCount > 0
   const rollsLeft = MAX_ROLLS - rollCount
+  const t = theme ?? {}
 
   function handleRoll() {
     if (rolling || rollsLeft <= 0) return
@@ -45,41 +121,41 @@ export default function DiceRoller() {
   }
 
   return (
-    <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-slate-800/60 p-3 flex flex-col gap-2">
-      {/* Dados */}
+    <div className="mx-3 mb-3 rounded-2xl p-3 flex flex-col gap-2"
+      style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+
+      {/* Dados con caras del modo normal */}
       <div className="flex justify-center gap-2">
         {dice.map((val, i) => (
-          <Die key={i} index={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} />
+          <NormalDie key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} />
         ))}
       </div>
 
       {/* Botones + contador */}
       <div className="flex gap-2 items-center">
-        <button
-          onClick={handleRoll}
-          disabled={rolling || rollsLeft <= 0}
-          className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40"
-        >
+        <button onClick={handleRoll} disabled={rolling || rollsLeft <= 0}
+          className="flex-1 py-2.5 rounded-xl font-bold text-sm transition disabled:opacity-40"
+          style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
           🎲 Lanzar
         </button>
 
-        {/* Contador de tiradas */}
+        {/* Contador */}
         <div className="flex gap-1">
           {[1, 2, 3].map(n => (
-            <div key={n} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-              rollCount >= n
-                ? 'bg-amber-500 text-black'
-                : 'bg-white/10 text-white/30'
-            }`}>
+            <div key={n}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
+              style={{
+                background: rollCount >= n ? '#f59e0b' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+                color: rollCount >= n ? '#000' : (t.textMuted ?? 'rgba(255,255,255,0.3)'),
+              }}>
               {n}
             </div>
           ))}
         </div>
 
-        <button
-          onClick={handleReset}
-          className="px-3 py-2.5 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/20 text-white/70 transition"
-        >
+        <button onClick={handleReset}
+          className="px-3 py-2.5 rounded-xl font-bold text-sm transition"
+          style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.textMuted ?? 'rgba(255,255,255,0.6)' }}>
           ✕
         </button>
       </div>
