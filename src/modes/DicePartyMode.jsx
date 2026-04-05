@@ -256,6 +256,38 @@ export default function DicePartyMode({ modeToggle }) {
   )
 }
 
+// ── Modal de info de combinación ──────────────────────────────────────────
+
+function InfoModal({ combo, onClose }) {
+  if (!combo) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+         onClick={onClose}>
+      <div className="bg-slate-800 rounded-2xl p-5 border border-white/10 shadow-2xl max-w-xs w-full"
+           onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-bold text-base">{combo.label}</h3>
+          <button onClick={onClose} className="text-white/40 hover:text-white text-xl leading-none">✕</button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Requisito</div>
+            <div className="text-sm text-white/80">{combo.info.req}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Puntuación</div>
+            <div className="text-sm text-emerald-300 font-medium">{combo.info.score}</div>
+          </div>
+          <div className="bg-slate-700/60 rounded-xl px-3 py-2">
+            <div className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Ejemplo</div>
+            <div className="text-sm text-amber-300 font-mono">{combo.info.example}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Scorecard ─────────────────────────────────────────────────────────────
 //
 // Filas = combinaciones, columnas = jugadores (igual que el modo normal).
@@ -266,6 +298,8 @@ function Scorecard({
   upperSums, upperBonuses, totals, jokerBonuses,
   onSelectCombo, currentPlayer, hasRolled, phase,
 }) {
+  const [infoCombo, setInfoCombo] = useState(null)
+
   function cellClass(comboId, pi) {
     const played      = scores[pi][comboId] !== null
     const isSelected  = selectedCombo === comboId && pi === currentPlayer
@@ -366,6 +400,12 @@ function Scorecard({
           <div className="pl-3 py-2 flex items-center gap-1.5">
             <span className="text-white/80 text-sm font-medium">{combo.badge}</span>
             {combo.fixedScore && <span className="text-[10px] text-white/30">({combo.fixedScore})</span>}
+            {/* Botón de info */}
+            <button
+              onClick={e => { e.stopPropagation(); setInfoCombo(combo) }}
+              className="ml-auto mr-2 w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/40 hover:text-white/70 text-[10px] font-bold transition flex-shrink-0"
+              aria-label={`Info: ${combo.label}`}
+            >ⓘ</button>
           </div>
           {players.map((_, pi) => (
             <div key={pi}
@@ -376,6 +416,9 @@ function Scorecard({
           ))}
         </div>
       ))}
+
+      {/* Modal de info */}
+      <InfoModal combo={infoCombo} onClose={() => setInfoCombo(null)} />
 
       {/* Bonus Joker */}
       <div className="grid items-center bg-slate-900/30 border-b border-white/10"

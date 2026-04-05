@@ -20,13 +20,34 @@ export const UPPER_COMBOS = [
 
 // ── Sección Inferior ────────────────────────────────────────────────────────
 export const LOWER_COMBOS = [
-  { id: 'threeKind',   label: '3 de un Tipo',      badge: '3 Iguales', section: 'lower', fixedScore: null },
-  { id: 'fourKind',    label: '4 de un Tipo',       badge: '4 Iguales', section: 'lower', fixedScore: null },
-  { id: 'fullHouse',   label: 'Full',               badge: 'Full',      section: 'lower', fixedScore: 25   },
-  { id: 'smallStr',    label: 'Escalera Pequeña',   badge: 'Esc. Peq.', section: 'lower', fixedScore: 30   },
-  { id: 'largeStr',    label: 'Escalera Grande',    badge: 'Esc. Gran.',section: 'lower', fixedScore: 40   },
-  { id: 'fiveKind',    label: '5 de un Tipo',       badge: '5 Iguales', section: 'lower', fixedScore: 50   },
-  { id: 'chance',      label: 'Azar',               badge: 'Azar',      section: 'lower', fixedScore: null },
+  {
+    id: 'threeKind', label: '3 de un Tipo', badge: '3 Iguales', section: 'lower', fixedScore: null,
+    info: { req: 'Al menos 3 dados con el mismo valor.', score: 'Suma de los 5 dados.', example: '(4,4,4,2,1) → 15 pts' },
+  },
+  {
+    id: 'fourKind', label: '4 de un Tipo', badge: '4 Iguales', section: 'lower', fixedScore: null,
+    info: { req: 'Al menos 4 dados con el mismo valor.', score: 'Suma de los 5 dados.', example: '(3,3,3,3,6) → 18 pts' },
+  },
+  {
+    id: 'fullHouse', label: 'Full', badge: 'Full', section: 'lower', fixedScore: 25,
+    info: { req: '3 dados iguales + 2 dados iguales de otro valor. (5 iguales NO cuenta.)', score: 'Siempre 25 pts.', example: '(2,2,5,5,5) → 25 pts' },
+  },
+  {
+    id: 'smallStr', label: 'Escalera Pequeña', badge: 'Esc. Peq.', section: 'lower', fixedScore: 30,
+    info: { req: '4 dados en secuencia consecutiva.', score: 'Siempre 30 pts.', example: '(3,4,5,6,3) → 30 pts' },
+  },
+  {
+    id: 'largeStr', label: 'Escalera Grande', badge: 'Esc. Gran.', section: 'lower', fixedScore: 40,
+    info: { req: '5 dados en secuencia consecutiva.', score: 'Siempre 40 pts.', example: '(2,3,4,5,6) → 40 pts' },
+  },
+  {
+    id: 'fiveKind', label: '5 de un Tipo', badge: '5 Iguales', section: 'lower', fixedScore: 50,
+    info: { req: 'Los 5 dados muestran el mismo valor.', score: '50 pts. Si ya usaste esta casilla con 50 pts y vuelves a sacarla, ¡obtienes +100 de Joker bonus!', example: '(6,6,6,6,6) → 50 pts' },
+  },
+  {
+    id: 'chance', label: 'Azar', badge: 'Azar', section: 'lower', fixedScore: null,
+    info: { req: 'Sin requisito. Cualquier combinación vale.', score: 'Suma de los 5 dados.', example: '(1,2,3,4,6) → 16 pts' },
+  },
 ]
 
 // Todas las combinaciones en orden
