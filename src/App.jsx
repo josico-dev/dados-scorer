@@ -105,8 +105,6 @@ export default function App() {
         </div>
       </header>
 
-      {showDiceRoller && <DiceRoller />}
-
       <DadosMode
         players={players}
         scores={scores}
@@ -118,6 +116,9 @@ export default function App() {
         onSavePlayers={savePlayers}
         onResetScores={resetScores}
       />
+
+      {/* Lanzador de dados — fijo al final, debajo de la tabla */}
+      {showDiceRoller && <DiceRoller />}
     </div>
   )
 }

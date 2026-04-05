@@ -41,7 +41,15 @@ function rollDice(dice, locked) {
 }
 
 function loadDPState() {
-  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null } catch { return null }
+  try {
+    const r = localStorage.getItem(STORAGE_KEY)
+    if (!r) return null
+    const parsed = JSON.parse(r)
+    // Validar que la estructura es compatible (tiene el campo players como array)
+    if (!parsed?.players || !Array.isArray(parsed.players)) return null
+    if (!Array.isArray(parsed.scores)) return null
+    return parsed
+  } catch { return null }
 }
 function saveDPState(s) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) } catch {}
