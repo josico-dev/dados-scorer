@@ -159,10 +159,10 @@ export default function DicePartyMode({ modeToggle }) {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
+      <header className="shrink-0 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
         <span className="text-xl">🎲</span>
         {modeToggle}
         <div className="flex items-center gap-1.5">
@@ -179,9 +179,10 @@ export default function DicePartyMode({ modeToggle }) {
       </header>
 
       {/* Área de juego */}
-      <div className="flex-1 flex flex-col gap-3 p-3">
+      <div className="flex-1 flex flex-col gap-2 p-3 overflow-hidden">
 
-        {/* Scorecard */}
+        {/* Scorecard — crece y tiene scroll propio si hace falta */}
+        <div className="flex-1 overflow-y-auto min-h-0">
         <Scorecard
           players={players}
           scores={scores}
@@ -197,10 +198,11 @@ export default function DicePartyMode({ modeToggle }) {
           hasRolled={hasRolled}
           phase={phase}
         />
+        </div>
 
         {/* Banner Joker */}
         {jokerActive && hasRolled && (
-          <div className="px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center">
+          <div className="shrink-0 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center">
             🌟 ¡JOKER! +100 bonus
             {forcedCombo
               ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
@@ -208,15 +210,15 @@ export default function DicePartyMode({ modeToggle }) {
           </div>
         )}
 
-        {/* Dados más grandes */}
-        <div className="flex justify-center gap-3 py-2">
+        {/* Dados */}
+        <div className="shrink-0 flex justify-center gap-3 py-1">
           {dice.map((val, i) => (
             <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={72} />
           ))}
         </div>
 
-        {/* Botones más grandes */}
-        <div className="flex gap-3 pb-3">
+        {/* Botones */}
+        <div className="shrink-0 flex gap-3 pb-2">
           <button onClick={handleRoll} disabled={!canRoll}
             className="flex-1 py-4 rounded-2xl font-black text-base bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
             🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}

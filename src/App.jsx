@@ -85,8 +85,8 @@ export default function App() {
 
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
+      <header className="shrink-0 bg-slate-900/80 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
         <span className="text-xl">🎲</span>
         <ModeToggle />
         <div className="flex gap-1.5">
@@ -118,7 +118,7 @@ export default function App() {
       />
 
       {/* Lanzador de dados — fijo al final, debajo de la tabla */}
-      {showDiceRoller && <DiceRoller />}
+      {showDiceRoller && <div className="shrink-0"><DiceRoller /></div>}
     </div>
   )
 }
