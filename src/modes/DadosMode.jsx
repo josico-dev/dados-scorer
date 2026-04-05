@@ -135,7 +135,7 @@ export default function DadosMode({
                                   : `1px solid ${isDark ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.25)'}`,
                                 color: isPending ? '#fff' : '#a78bfa',
                               }}>
-                              {isPending ? `✓ ${suggested}×${row.value}=${suggested * row.value}` : `${suggested}×${row.value}`}
+                              {isPending ? `✓ ${suggested * row.value} pts` : `${suggested * row.value}`}
                             </button>
                           ) : (
                             // Modo normal: input editable
