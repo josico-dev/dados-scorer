@@ -351,7 +351,7 @@ function Scorecard({
         <div className="py-2 pl-3 text-xs text-white/30 font-semibold uppercase tracking-wider">Combinación</div>
         {players.map((name, pi) => (
           <div key={pi} className={`text-center py-2 text-xs font-bold truncate px-1 ${pi === currentPlayer && phase === 'playing' ? 'text-amber-300' : 'text-white/40'}`}>
-            {name.split(' ')[0]}
+            {name}
           </div>
         ))}
       </div>
