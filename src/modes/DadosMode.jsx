@@ -23,53 +23,26 @@ export default function DadosMode({
   theme, isDark,
   players, scores, showPlayersModal, showResetModal,
   onUpdateScore, onClosePlayers, onCloseReset, onSavePlayers, onResetScores,
-  diceActive, rollerDice, currentPlayer, onPlay,
+  diceActive, rollerDice, currentPlayer, onPlay, onSelectionChange,
 }) {
   const t = theme ?? {}
 
-  // Celda seleccionada para confirmar: { pi, rowId, subId, value }
   const [selected, setSelected] = useState(null)
 
   function handleCellClick(pi, rowId, subId) {
-    if (!diceActive) return
-    if (pi !== currentPlayer) return  // solo puede jugar el jugador actual
+    if (!diceActive || pi !== currentPlayer) return
     const count = suggestDice(rowId, rollerDice)
     if (count === 0) return
     const value = count * ROW_DICE_VALUE[rowId]
-    setSelected({ pi, rowId, subId, value })
-  }
-
-  function handlePlay() {
-    if (!selected) return
-    onPlay(selected.pi, selected.rowId, selected.subId, selected.value)
-    setSelected(null)
+    const next = { pi, rowId, subId, value }
+    setSelected(next)
+    onSelectionChange?.(next)
   }
 
   function cellKey(pi, rowId, subId) { return `${pi}-${rowId}-${subId}` }
 
   return (
     <>
-      {/* Banner de turno + botón JUGAR (solo en modo dados activo) */}
-      {diceActive && (
-        <div className="flex items-center justify-between px-3 py-2 gap-2"
-          style={{ background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.08)', borderBottom: `1px solid ${isDark ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.15)'}` }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold" style={{ color: '#a78bfa' }}>
-              🎲 Turno de:
-            </span>
-            <span className="text-sm font-black" style={{ color: '#f1f5f9' }}>
-              {players[currentPlayer]}
-            </span>
-          </div>
-          <button
-            onClick={handlePlay}
-            disabled={!selected}
-            className="px-4 py-1.5 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
-            style={{ background: selected ? 'linear-gradient(135deg,#22c55e,#06b6d4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: selected ? '#000' : (t.textMuted ?? '#6b7280') }}>
-            ✅ JUGAR
-          </button>
-        </div>
-      )}
 
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto safe-bottom">
         <table

@@ -65,7 +65,7 @@ function NormalDie({ value, locked, rolling, onClick }) {
   )
 }
 
-export default function DiceRoller({ theme, isDark, onDiceChange, resetKey }) {
+export default function DiceRoller({ theme, isDark, onDiceChange, resetKey, onPlay, canPlay }) {
   const [dice,      setDice]      = useState(Array(NUM_DICE).fill(0))
   const [locked,    setLocked]    = useState(Array(NUM_DICE).fill(false))
   const [rolling,   setRolling]   = useState(false)
@@ -131,6 +131,13 @@ export default function DiceRoller({ theme, isDark, onDiceChange, resetKey }) {
           style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
           🎲 Lanzar
         </button>
+        {onPlay !== undefined && (
+          <button onClick={onPlay} disabled={!canPlay}
+            className="flex-1 py-2.5 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
+            style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
+            ✅ JUGAR
+          </button>
+        )}
 
         <div className="flex gap-1">
           {[1, 2, 3].map(n => (

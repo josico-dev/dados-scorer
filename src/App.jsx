@@ -31,7 +31,8 @@ export default function App() {
   const [rollerDice,      setRollerDice]      = useState(Array(5).fill(0))
   const [rollerHasRolled, setRollerHasRolled] = useState(false)
   const [currentPlayer,   setCurrentPlayer]   = useState(0)
-  const [rollerReset,     setRollerReset]     = useState(0) // incrementar fuerza reset del roller
+  const [rollerReset,     setRollerReset]     = useState(0)
+  const [diceSelected,    setDiceSelected]    = useState(null) // celda seleccionada en DadosMode
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
@@ -160,12 +161,12 @@ export default function App() {
           diceActive={showDiceRoller && rollerHasRolled}
           rollerDice={rollerDice}
           currentPlayer={currentPlayer}
+          onSelectionChange={setDiceSelected}
           onPlay={(pi, rowId, subId, value) => {
             updateScore(pi, rowId, subId, String(value))
-            // Avanzar al siguiente jugador
             setCurrentPlayer(prev => (prev + 1) % players.length)
-            // Resetear los dados
             setRollerReset(r => r + 1)
+            setDiceSelected(null)
           }}
         />
         {showDiceRoller && (
@@ -174,9 +175,17 @@ export default function App() {
               theme={theme}
               isDark={isDark}
               resetKey={rollerReset}
+              canPlay={!!diceSelected}
               onDiceChange={(dice, hasRolled) => {
                 setRollerDice(dice)
                 setRollerHasRolled(hasRolled)
+              }}
+              onPlay={() => {
+                if (!diceSelected) return
+                updateScore(diceSelected.pi, diceSelected.rowId, diceSelected.subId, String(diceSelected.value))
+                setCurrentPlayer(prev => (prev + 1) % players.length)
+                setRollerReset(r => r + 1)
+                setDiceSelected(null)
               }}
             />
           </div>
