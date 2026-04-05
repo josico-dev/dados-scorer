@@ -9,22 +9,20 @@
   }
 
   body, #root {
-    /* svh = small viewport height (con todas las barras visibles) — el más conservador */
-    /* Fallback en cascada para browsers sin soporte */
-    height: 100vh;
-    height: 100svh;
-    height: var(--app-height, 100svh); /* JS calcula el valor real con visualViewport */
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: var(--app-height, 100svh);
+    /* Sin overflow:hidden — scroll de página activado si el contenido no cabe */
   }
 
-  /* Shell principal de la app — misma altura en todos los dispositivos */
+  /* Shell principal: intenta ocupar toda la pantalla, pero si no cabe hace scroll */
   .app-shell {
-    height: 100vh;
-    height: 100svh;
-    height: var(--app-height, 100svh);
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: var(--app-height, 100svh);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    /* Sin overflow:hidden aquí tampoco */
     /* Safe areas para muescas y home indicators (iPhone, Android) */
     padding-left:  env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);

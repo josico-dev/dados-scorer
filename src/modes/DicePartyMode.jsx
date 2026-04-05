@@ -179,10 +179,10 @@ export default function DicePartyMode({ modeToggle }) {
       </header>
 
       {/* Área de juego */}
-      <div className="flex-1 min-h-0 flex flex-col px-3 pt-2 pb-2 gap-2">
+      <div className="flex flex-col px-3 pt-2 pb-2 gap-2">
 
-        {/* Scorecard — flex-1 con min-h-0 + overflow-y-auto para scroll interno */}
-        <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl">
+        {/* Scorecard */}
+        <div className="rounded-2xl">
           <Scorecard
             players={players}
             scores={scores}
@@ -200,8 +200,8 @@ export default function DicePartyMode({ modeToggle }) {
           />
         </div>
 
-        {/* Zona inferior fija: joker + dados + botones */}
-        <div className="shrink-0 flex flex-col gap-2 safe-bottom">
+        {/* Zona inferior: joker + dados + botones */}
+        <div className="flex flex-col gap-2 safe-bottom">
 
           {/* Banner Joker */}
           {jokerActive && hasRolled && (
