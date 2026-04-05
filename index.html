@@ -20,6 +20,20 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+              // Si hay una nueva versión del SW, recarga la página para aplicarla
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                      window.location.reload()
+                    }
+                  })
+                }
+              })
+            })
+            .catch(() => {}) // No bloquear si falla el registro
         })
       }
 

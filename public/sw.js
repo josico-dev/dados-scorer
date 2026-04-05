@@ -1,44 +1,45 @@
 // ─── Service Worker ─────────────────────────────────────────────────────────
-// Cachea todos los assets al instalar y sirve desde caché cuando no hay red.
+const CACHE_NAME = 'dados-scorer-v2'
 
-const CACHE_NAME = 'dados-scorer-v1'
-
-// Al instalar: precachea la shell de la app
+// Al instalar: precachea el HTML principal
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      cache.addAll(['/', '/index.html'])
-    )
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(['/']))
+      .catch(() => {}) // no bloquear la instalación si falla
   )
   self.skipWaiting()
 })
 
-// Al activar: elimina cachés antiguas
+// Al activar: limpia cachés antiguos
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
   )
   self.clients.claim()
 })
 
-// Fetch: cache-first para assets estáticos, network-first para el resto
+// Fetch: network-first con fallback a caché
+// Si la red falla Y hay caché → sirve caché
+// Si la red falla Y NO hay caché → deja que el browser gestione el error (no blank)
 self.addEventListener('fetch', event => {
-  // Solo manejamos GET
   if (event.request.method !== 'GET') return
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetchAndCache = fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         // Solo cacheamos respuestas válidas del mismo origen
         if (response.ok && event.request.url.startsWith(self.location.origin)) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()))
+          const clone = response.clone()
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone))
         }
         return response
       })
-      // Devuelve caché inmediatamente si existe, actualiza en background
-      return cached || fetchAndCache
-    })
+      .catch(() => {
+        // Sin red: intentar servir desde caché
+        return caches.match(event.request)
+          .then(cached => cached || Response.error())
+      })
   )
 })
