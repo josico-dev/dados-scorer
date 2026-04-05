@@ -19,11 +19,12 @@ export const FACE_COLORS = {
   3: { bg: '#0f1f3b', border: '#3b82f6', pip: '#93c5fd', glow: '#3b82f688' }, // azul
   4: { bg: '#0f2e1a', border: '#22c55e', pip: '#86efac', glow: '#22c55e88' }, // verde
   5: { bg: '#1f0f3b', border: '#a855f7', pip: '#d8b4fe', glow: '#a855f788' }, // morado
-  6: { bg: '#0a2530', border: '#06b6d4', pip: '#67e8f9', glow: '#06b6d488' }, // celeste
+  6: { bg: '#2a0f2e', border: '#ec4899', pip: '#f9a8d4', glow: '#ec489988' }, // rosa/fucsia (diferente del azul 3)
   0: { bg: '#1e293b', border: '#475569', pip: '#94a3b8', glow: '#47556944' }, // sin valor
 }
 
-export const LOCKED_COLORS = { bg: '#1e1a0e', border: '#f59e0b', pip: '#fcd34d', glow: '#f59e0b99' }
+// Bloqueado: verde lima (diferente del amarillo valor-2)
+export const LOCKED_COLORS = { bg: '#0f200f', border: '#84cc16', pip: '#d9f99d', glow: '#84cc1699' }
 
 export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
   const [animKey, setAnimKey] = useState(0)

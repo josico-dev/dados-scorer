@@ -1,22 +1,24 @@
 // ─── App principal ─────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
-
-import { DEFAULT_PLAYERS, ROWS, SUBTYPES } from './config'
+import { DEFAULT_PLAYERS, ROWS } from './config'
 import { loadState, saveState } from './storage'
 import { emptyScores } from './helpers'
+import { THEMES, loadTheme, saveTheme } from './theme'
 import DadosMode from './modes/DadosMode'
 import DicePartyMode from './modes/DicePartyMode'
 import DiceRoller from './components/DiceRoller'
-import PlayersModal from './PlayersModal'
-import ResetModal from './ResetModal'
 
 const MODE_KEY = 'dados-scorer-mode'
 const loadMode = () => { try { return localStorage.getItem(MODE_KEY) || 'dados' } catch { return 'dados' } }
 const saveMode = m => { try { localStorage.setItem(MODE_KEY, m) } catch {} }
 
 export default function App() {
-  const [mode, setMode] = useState(() => loadMode())
+  const [mode,      setMode]      = useState(() => loadMode())
+  const [themeName, setThemeName] = useState(() => loadTheme())
+
+  const theme = THEMES[themeName] ?? THEMES.dark
+  const isDark = themeName === 'dark'
 
   // ── Estado modo Dados ────────────────────────────────────────────────────
   const saved = loadState()
@@ -28,6 +30,10 @@ export default function App() {
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
+  useEffect(() => {
+    saveTheme(themeName)
+    document.body.style.background = theme.bodyBg
+  }, [themeName, theme.bodyBg])
 
   function updateScore(pi, rowId, sub, val) {
     setScores(prev => ({
@@ -53,24 +59,24 @@ export default function App() {
     setShowResetModal(false)
   }
 
-  // ── Tab toggle de modo ───────────────────────────────────────────────────
+  function toggleTheme() {
+    setThemeName(t => t === 'dark' ? 'light' : 'dark')
+  }
+
+  // ── Componentes de header compartidos ────────────────────────────────────
 
   function ModeToggle() {
     return (
-      <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
         {[
-          { id: 'dados',      label: '🃏 Dados',      active: 'from-amber-500 to-orange-500' },
-          { id: 'dice-party', label: '🎲 Dice Party', active: 'from-violet-500 to-indigo-500' },
+          { id: 'dados',      label: '🃏 Dados'      },
+          { id: 'dice-party', label: '🎲 Dice Party' },
         ].map(m => (
-          <button
-            key={m.id}
-            onClick={() => setMode(m.id)}
-            className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
-              mode === m.id
-                ? `bg-gradient-to-r ${m.active} text-white shadow-lg`
-                : 'text-white/40 hover:text-white/70'
-            }`}
-          >
+          <button key={m.id} onClick={() => setMode(m.id)}
+            className="px-3 py-1 rounded-lg text-xs font-black transition-all"
+            style={mode === m.id
+              ? { background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff' }
+              : { color: theme.textMuted }}>
             {m.label}
           </button>
         ))}
@@ -78,36 +84,65 @@ export default function App() {
     )
   }
 
+  function HeaderButtons({ extra }) {
+    return (
+      <div className="flex gap-1.5 items-center">
+        {extra}
+        {/* Toggle tema */}
+        <button onClick={toggleTheme}
+          className="px-2.5 py-1.5 rounded-lg text-sm transition"
+          style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
+          {isDark ? '☀️' : '🌙'}
+        </button>
+      </div>
+    )
+  }
+
   // ── Modo Dice Party ───────────────────────────────────────────────────────
   if (mode === 'dice-party') {
-    return <DicePartyMode modeToggle={<ModeToggle />} />
+    return (
+      <DicePartyMode
+        theme={theme}
+        isDark={isDark}
+        modeToggle={<ModeToggle />}
+        themeToggle={<HeaderButtons />}
+        onToggleTheme={toggleTheme}
+      />
+    )
   }
 
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
-    <div className="app-shell text-white select-none" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #0a0f2e 40%, #060d1f 100%)' }}>
-      <header className="shrink-0 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2" style={{ background: 'rgba(10,8,30,0.85)' }}>
+    <div className="app-shell select-none" style={{ background: theme.appBg, color: theme.text }}>
+      <header className="shrink-0 backdrop-blur border-b px-3 py-2 flex items-center justify-between gap-2"
+        style={{ background: theme.headerBg, borderColor: theme.borderSubtle }}>
         <span className="text-xl">🎲</span>
         <ModeToggle />
-        <div className="flex gap-1.5">
-          <button onClick={() => setShowDiceRoller(v => !v)}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${showDiceRoller ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 hover:bg-white/20'}`}>
-            🎲
-          </button>
-          <button onClick={() => setShowPlayersModal(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition">
-            👥
-          </button>
-          <button onClick={() => setShowResetModal(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition">
-            🔄
-          </button>
-        </div>
+        <HeaderButtons extra={
+          <>
+            <button onClick={() => setShowDiceRoller(v => !v)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+              style={{ background: showDiceRoller ? 'rgba(245,158,11,0.25)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: showDiceRoller ? '#f59e0b' : theme.text }}>
+              🎲
+            </button>
+            <button onClick={() => setShowPlayersModal(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+              style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
+              👥
+            </button>
+            <button onClick={() => setShowResetModal(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+              style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+              🔄
+            </button>
+          </>
+        } />
       </header>
 
-      {/* Contenedor que limita la altura — min-h-0 es clave para flex-1 anidado */}
       <div className="flex-1 min-h-0 flex flex-col">
         <DadosMode
+          theme={theme}
+          isDark={isDark}
           players={players}
           scores={scores}
           showPlayersModal={showPlayersModal}
@@ -118,7 +153,7 @@ export default function App() {
           onSavePlayers={savePlayers}
           onResetScores={resetScores}
         />
-        {showDiceRoller && <div className="shrink-0 safe-bottom"><DiceRoller /></div>}
+        {showDiceRoller && <div className="shrink-0 safe-bottom"><DiceRoller theme={theme} isDark={isDark} /></div>}
       </div>
     </div>
   )

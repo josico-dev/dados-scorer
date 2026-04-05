@@ -63,7 +63,8 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function DicePartyMode({ modeToggle }) {
+export default function DicePartyMode({ modeToggle, themeToggle, theme, isDark, onToggleTheme }) {
+  const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
   const [gs, setGs]           = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
   const [rolling, setRolling] = useState(false)
   const [showReset, setShowReset]     = useState(false)
@@ -163,10 +164,11 @@ export default function DicePartyMode({ modeToggle }) {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="app-shell text-white select-none" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #0a0f2e 40%, #060d1f 100%)' }}>
+    <div className="app-shell select-none" style={{ background: t.appBg, color: t.text }}>
 
       {/* Header */}
-      <header className="shrink-0 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2" style={{ background: 'rgba(10,8,30,0.85)' }}>
+      <header className="shrink-0 backdrop-blur border-b px-3 py-2 flex items-center justify-between gap-2"
+        style={{ background: t.headerBg, borderColor: t.borderSubtle }}>
         <span className="text-xl">🎲</span>
         {modeToggle}
         <div className="flex items-center gap-1.5">
@@ -176,9 +178,16 @@ export default function DicePartyMode({ modeToggle }) {
             </span>
           )}
           <button onClick={() => setShowPlayers(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition">👥</button>
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>👥</button>
           <button onClick={() => setShowReset(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition">🔄</button>
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>🔄</button>
+          <button onClick={onToggleTheme}
+            className="px-2.5 py-1.5 rounded-lg text-sm transition"
+            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>
+            {isDark ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
 
