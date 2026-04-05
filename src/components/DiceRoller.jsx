@@ -7,10 +7,16 @@ import { FACE_COLORS } from '../diceParty/Die'
 const NUM_DICE  = 5
 const MAX_ROLLS = 3
 
-// Caras del dado en el modo normal (valor → etiqueta)
-const FACE_LABELS = { 1: 'V', 2: 'VI', 3: 'J', 4: 'Q', 5: 'K', 6: 'AS' }
-// AS tiene un punto rojo en lugar de letra
-const FACE_AS_DOT = 6
+// Caras con letra (J, Q, K) y cara con punto grande (AS=6)
+// V(1) y VI(2) usan pips como un dado real
+const FACE_AS_DOT  = 6  // punto central grande
+const FACE_LABELS  = { 3: 'J', 4: 'Q', 5: 'K' }
+
+// Posiciones de pips para V(1)=5pips y VI(2)=6pips
+const NORMAL_PIPS = {
+  1: [[30,18],[18,30],[30,30],[42,30],[30,42]],           // V → 5 puntos
+  2: [[18,13],[42,13],[18,30],[42,30],[18,47],[42,47]],   // VI → 6 puntos
+}
 
 function rollDice(dice, locked) {
   return dice.map((d, i) => locked[i] ? d : Math.ceil(Math.random() * 6))
@@ -62,16 +68,15 @@ function NormalDie({ value, locked, rolling, onClick }) {
         {value === FACE_AS_DOT ? (
           // AS → punto central grande
           <circle cx="30" cy="30" r="10" fill={colors.pip ?? colors.border} />
-        ) : value >= 1 ? (
-          // Resto → letra de la cara
-          <text
-            x="30" y="36"
-            textAnchor="middle"
-            fontSize={value === 2 ? 16 : 20}
-            fill={colors.pip ?? colors.border}
-            fontWeight="900"
-            fontFamily="system-ui, sans-serif"
-          >
+        ) : NORMAL_PIPS[value] ? (
+          // V (1→5 pips) y VI (2→6 pips) → puntitos como dado real
+          NORMAL_PIPS[value].map(([cx, cy], i) => (
+            <circle key={i} cx={cx} cy={cy} r="5" fill={colors.pip ?? colors.border} />
+          ))
+        ) : value >= 3 ? (
+          // J, Q, K → letra
+          <text x="30" y="36" textAnchor="middle" fontSize="20"
+            fill={colors.pip ?? colors.border} fontWeight="900" fontFamily="system-ui, sans-serif">
             {FACE_LABELS[value]}
           </text>
         ) : (

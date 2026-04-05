@@ -102,14 +102,17 @@ export function isFiveOfAKind(dice) {
 
 /**
  * Detecta si el joker está activo para este turno.
+ * Condiciones:
  * - Los dados son 5 iguales
  * - La combinación 5Iguales ya fue jugada CON 50 pts (no con 0)
+ * Cada vez que se vuelve a sacar 5 iguales cumpliendo esto → +100 bonus acumulable.
  *
  * @returns {{ jokerActive: boolean, jokerUpperId: string|null }}
  */
 export function detectJoker(dice, playerScores) {
   if (!isFiveOfAKind(dice)) return { jokerActive: false, jokerUpperId: null }
   const fiveKindScore = playerScores['fiveKind']
+  // Joker activo si ya jugaste fiveKind con 50 pts (puede pasar múltiples veces)
   if (fiveKindScore !== 50) return { jokerActive: false, jokerUpperId: null }
   const upperId = UPPER_ID_BY_VALUE[dice[0]]
   return { jokerActive: true, jokerUpperId: upperId }

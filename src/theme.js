@@ -18,20 +18,20 @@ export const THEMES = {
     bodyBg:       '#060918',
   },
   light: {
-    appBg:        'linear-gradient(135deg, #f0f4ff 0%, #e8eeff 40%, #f5f0ff 100%)',
-    headerBg:     'rgba(255,255,255,0.9)',
-    scorecardBg:  'rgba(255,255,255,0.95)',
-    scorecardBorder: 'rgba(99,102,241,0.25)',
-    rowEven:      'rgba(0,0,0,0.03)',
-    rowOdd:       'transparent',
-    text:         '#0f172a',
-    textMuted:    'rgba(0,0,0,0.45)',
-    textFaint:    'rgba(0,0,0,0.25)',
-    cellBg:       'rgba(0,0,0,0.04)',
-    inputBg:      'rgba(0,0,0,0.06)',
-    borderSubtle: 'rgba(0,0,0,0.08)',
-    sectionBg:    'rgba(0,0,0,0.06)',
-    bodyBg:       '#dde3f5',
+    appBg:           'linear-gradient(135deg, #e8ecff 0%, #f0eaff 50%, #e4f0ff 100%)',
+    headerBg:        'rgba(255,255,255,0.95)',
+    scorecardBg:     '#ffffff',
+    scorecardBorder: 'rgba(99,102,241,0.35)',
+    rowEven:         'rgba(99,102,241,0.05)',
+    rowOdd:          'transparent',
+    text:            '#0f172a',          // negro casi puro
+    textMuted:       '#374151',          // gris oscuro legible
+    textFaint:       '#6b7280',          // gris medio
+    cellBg:          'rgba(0,0,0,0.05)',
+    inputBg:         'rgba(0,0,0,0.07)',
+    borderSubtle:    'rgba(0,0,0,0.12)',
+    sectionBg:       'rgba(0,0,0,0.05)',
+    bodyBg:          '#c7d2fe',
   },
 }
 
