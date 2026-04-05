@@ -33,8 +33,9 @@ export default function DadosMode({
     if (!diceActive || pi !== currentPlayer) return
     const count = suggestDice(rowId, rollerDice)
     if (count === 0) return
-    const value = count * ROW_DICE_VALUE[rowId]
-    const next = { pi, rowId, subId, value }
+    // Guardamos el NÚMERO DE DADOS (no el resultado final)
+    // ScoreCell ya multiplica por faceValue, igual que en modo manual
+    const next = { pi, rowId, subId, value: count }
     setSelected(next)
     onSelectionChange?.(next)
   }
@@ -116,6 +117,7 @@ export default function DadosMode({
                                   : `1px solid ${isDark ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.25)'}`,
                                 color: isSel ? '#fff' : '#a78bfa',
                               }}>
+                              {/* Mostramos puntuación final para que sea claro, pero guardamos nº dados */}
                               {suggestedPts}
                             </button>
                           ) : (
