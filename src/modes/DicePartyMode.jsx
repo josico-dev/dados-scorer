@@ -197,6 +197,8 @@ export default function DicePartyMode({ modeToggle, themeToggle, theme, isDark, 
         {/* Scorecard */}
         <div className="rounded-2xl">
           <Scorecard
+            theme={t}
+            isDark={isDark}
             players={players}
             scores={scores}
             potential={potential}
@@ -315,23 +317,37 @@ function InfoModal({ combo, onClose }) {
 // Upper y Lower son separadores sutiles, sin cabeceras dominantes.
 
 function Scorecard({
+  theme, isDark,
   players, scores, potential, selectedCombo, forcedCombo,
   upperSums, upperBonuses, totals, jokerBonuses,
   onSelectCombo, currentPlayer, hasRolled, phase,
 }) {
   const [infoCombo, setInfoCombo] = useState(null)
+  const t = theme ?? {}
 
-  function cellClass(comboId, pi) {
+  // Colores adaptativos
+  const cardBg      = t.scorecardBg    ?? 'rgba(15,12,40,0.85)'
+  const cardBorder  = t.scorecardBorder ?? 'rgba(99,102,241,0.2)'
+  const headerBg    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
+  const sectionBg   = isDark ? 'rgba(0,0,0,0.25)'       : 'rgba(0,0,0,0.05)'
+  const bonusBg     = isDark ? 'rgba(0,0,0,0.2)'        : 'rgba(0,0,0,0.04)'
+  const rowEvenBg   = isDark ? 'rgba(255,255,255,0.03)'  : 'rgba(0,0,0,0.02)'
+  const borderColor = isDark ? 'rgba(255,255,255,0.07)'  : 'rgba(0,0,0,0.07)'
+  const textMain    = t.text    ?? '#f1f5f9'
+  const textMuted   = t.textMuted ?? 'rgba(255,255,255,0.4)'
+  const textFaint   = t.textFaint ?? 'rgba(255,255,255,0.2)'
+
+  function cellStyle(comboId, pi) {
     const played      = scores[pi][comboId] !== null
     const isSelected  = selectedCombo === comboId && pi === currentPlayer
     const isForced    = forcedCombo   === comboId && pi === currentPlayer
     const isAvailable = potential?.[comboId]?.available && pi === currentPlayer && hasRolled
 
-    if (isForced)    return 'bg-amber-500/30 border border-amber-400 text-amber-200 font-bold cursor-pointer'
-    if (isSelected)  return 'bg-emerald-500/30 border border-emerald-400 text-emerald-200 font-bold cursor-pointer'
-    if (played)      return 'bg-white/5 text-white/70'
-    if (isAvailable) return 'bg-sky-500/15 text-sky-300 cursor-pointer active:bg-sky-500/30'
-    return 'text-white/20'
+    if (isForced)    return { background: 'rgba(245,158,11,0.25)', border: '1px solid #f59e0b',   color: '#fde68a', cursor: 'pointer', fontWeight: 'bold' }
+    if (isSelected)  return { background: 'rgba(34,197,94,0.2)',   border: '1px solid #22c55e',   color: '#86efac', cursor: 'pointer', fontWeight: 'bold' }
+    if (played)      return { background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: textMain }
+    if (isAvailable) return { background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', cursor: 'pointer' }
+    return { color: textFaint }
   }
 
   function cellContent(comboId, pi) {
@@ -347,44 +363,40 @@ function Scorecard({
     onSelectCombo(comboId)
   }
 
-  // Ancho de columna según número de jugadores
-  const colW  = players.length <= 2 ? 'w-16' : players.length <= 3 ? 'w-14' : 'w-12'
-  const colPx = players.length <= 2 ? 64     : players.length <= 3 ? 56     : 48
-
+  const colPx    = players.length <= 2 ? 64 : players.length <= 3 ? 56 : 48
   const gridCols = `1fr ${players.map(() => `${colPx}px`).join(' ')}`
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-indigo-500/20" style={{ background: "rgba(15,12,40,0.85)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
 
       {/* Cabecera */}
-      <div className="grid items-center bg-slate-700/60 border-b border-white/10"
-           style={{ gridTemplateColumns: gridCols }}>
-        <div className="py-2 pl-3 text-xs text-white/30 font-semibold uppercase tracking-wider">Combinación</div>
+      <div className="grid items-center border-b" style={{ gridTemplateColumns: gridCols, background: headerBg, borderColor }}>
+        <div className="py-2 pl-3 text-xs font-semibold uppercase tracking-wider" style={{ color: textMuted }}>Combinación</div>
         {players.map((name, pi) => (
-          <div key={pi} className={`text-center py-2 text-xs font-bold truncate px-1 ${pi === currentPlayer && phase === 'playing' ? 'text-amber-300' : 'text-white/40'}`}>
+          <div key={pi} className="text-center py-2 text-xs font-bold truncate px-1"
+            style={{ color: pi === currentPlayer && phase === 'playing' ? '#f59e0b' : textMuted }}>
             {name}
           </div>
         ))}
       </div>
 
       {/* Separador Superior */}
-      <div className="px-3 py-1 bg-slate-900/40 border-b border-white/5">
-        <span className="text-[10px] text-white/25 uppercase tracking-widest font-bold">Superior</span>
+      <div className="px-3 py-0.5 border-b" style={{ background: sectionBg, borderColor }}>
+        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: textFaint }}>Superior</span>
       </div>
 
       {/* Filas Upper */}
       {UPPER_COMBOS.map((combo, ri) => (
-        <div key={combo.id}
-          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.03]' : ''}`}
-          style={{ gridTemplateColumns: gridCols }}>
+        <div key={combo.id} className="grid items-center border-b"
+          style={{ gridTemplateColumns: gridCols, background: ri % 2 === 0 ? rowEvenBg : 'transparent', borderColor }}>
           <div className="flex items-center gap-2 pl-3 py-2">
             <MiniDie value={combo.upperValue} />
-            <span className="text-white/80 text-sm font-medium">{combo.badge}</span>
+            <span className="text-sm font-medium" style={{ color: textMain }}>{combo.badge}</span>
           </div>
           {players.map((_, pi) => (
-            <div key={pi}
-              onClick={() => handleClick(combo.id, pi)}
-              className={`h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
+            <div key={pi} onClick={() => handleClick(combo.id, pi)}
+              className="h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-all"
+              style={cellStyle(combo.id, pi)}>
               {cellContent(combo.id, pi)}
             </div>
           ))}
@@ -392,64 +404,57 @@ function Scorecard({
       ))}
 
       {/* Bonus upper */}
-      <div className="grid items-center bg-slate-900/30 border-b border-white/10"
-           style={{ gridTemplateColumns: gridCols }}>
+      <div className="grid items-center border-b" style={{ gridTemplateColumns: gridCols, background: bonusBg, borderColor }}>
         <div className="pl-3 py-1.5 flex items-center gap-1">
-          <span className="text-xs text-amber-400/70 font-bold">Bonus +35</span>
-          <span className="text-[10px] text-white/25">(&gt;62)</span>
+          <span className="text-xs font-bold" style={{ color: '#f59e0b' }}>Bonus +35</span>
+          <span className="text-[10px]" style={{ color: textFaint }}>(&gt;62)</span>
         </div>
         {players.map((_, pi) => (
           <div key={pi} className="flex flex-col items-center py-1">
-            <span className={`text-xs font-bold ${upperBonuses[pi] ? 'text-amber-300' : 'text-white/20'}`}>
+            <span className="text-xs font-bold" style={{ color: upperBonuses[pi] ? '#f59e0b' : textFaint }}>
               {upperBonuses[pi] ? '+35' : '—'}
             </span>
-            <span className="text-[10px] text-white/30">{upperSums[pi]}</span>
+            <span className="text-[9px]" style={{ color: textFaint }}>{upperSums[pi]}</span>
           </div>
         ))}
       </div>
 
       {/* Separador Inferior */}
-      <div className="px-3 py-1 bg-slate-900/40 border-b border-white/5">
-        <span className="text-[10px] text-white/25 uppercase tracking-widest font-bold">Inferior</span>
+      <div className="px-3 py-0.5 border-b" style={{ background: sectionBg, borderColor }}>
+        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: textFaint }}>Inferior</span>
       </div>
 
       {/* Filas Lower */}
       {LOWER_COMBOS.map((combo, ri) => (
-        <div key={combo.id}
-          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.03]' : ''}`}
-          style={{ gridTemplateColumns: gridCols }}>
+        <div key={combo.id} className="grid items-center border-b"
+          style={{ gridTemplateColumns: gridCols, background: ri % 2 === 0 ? rowEvenBg : 'transparent', borderColor }}>
           <div className="pl-3 py-2 flex items-center gap-1.5">
-            <span className="text-white/80 text-sm font-medium">{combo.badge}</span>
-            {combo.fixedScore && <span className="text-[10px] text-white/30">({combo.fixedScore})</span>}
-            {/* Botón de info */}
-            <button
-              onClick={e => { e.stopPropagation(); setInfoCombo(combo) }}
-              className="ml-auto mr-2 w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/40 hover:text-white/70 text-[10px] font-bold transition flex-shrink-0"
-              aria-label={`Info: ${combo.label}`}
-            >ⓘ</button>
+            <span className="text-sm font-medium" style={{ color: textMain }}>{combo.badge}</span>
+            {combo.fixedScore && <span className="text-[10px]" style={{ color: textFaint }}>({combo.fixedScore})</span>}
+            <button onClick={e => { e.stopPropagation(); setInfoCombo(combo) }}
+              className="ml-auto mr-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition flex-shrink-0"
+              style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: textMuted }}>ⓘ</button>
           </div>
           {players.map((_, pi) => (
-            <div key={pi}
-              onClick={() => handleClick(combo.id, pi)}
-              className={`h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
+            <div key={pi} onClick={() => handleClick(combo.id, pi)}
+              className="h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-all"
+              style={cellStyle(combo.id, pi)}>
               {cellContent(combo.id, pi)}
             </div>
           ))}
         </div>
       ))}
 
-      {/* Modal de info */}
       <InfoModal combo={infoCombo} onClose={() => setInfoCombo(null)} />
 
       {/* Bonus Joker */}
-      <div className="grid items-center bg-slate-900/30 border-b border-white/10"
-           style={{ gridTemplateColumns: gridCols }}>
+      <div className="grid items-center border-b" style={{ gridTemplateColumns: gridCols, background: bonusBg, borderColor }}>
         <div className="pl-3 py-1.5">
-          <span className="text-xs text-purple-300/70 font-bold">🌟 Joker ×100</span>
+          <span className="text-xs font-bold" style={{ color: '#c084fc' }}>🌟 Joker ×100</span>
         </div>
         {players.map((_, pi) => (
           <div key={pi} className="flex items-center justify-center py-1.5">
-            <span className={`text-xs font-bold ${jokerBonuses[pi] > 0 ? 'text-purple-300' : 'text-white/20'}`}>
+            <span className="text-xs font-bold" style={{ color: jokerBonuses[pi] > 0 ? '#c084fc' : textFaint }}>
               {jokerBonuses[pi] > 0 ? `+${jokerBonuses[pi] * 100}` : '—'}
             </span>
           </div>
@@ -457,12 +462,11 @@ function Scorecard({
       </div>
 
       {/* Totales */}
-      <div className="grid border-t-2 border-amber-400/30 bg-slate-900/50"
-           style={{ gridTemplateColumns: gridCols }}>
-        <div className="pl-3 py-3 text-xs text-white/30 font-bold uppercase tracking-wider self-center">Total</div>
+      <div className="grid" style={{ gridTemplateColumns: gridCols, background: bonusBg, borderTop: '2px solid rgba(167,139,250,0.3)' }}>
+        <div className="pl-3 py-3 text-xs font-bold uppercase tracking-wider self-center" style={{ color: textMuted }}>Total</div>
         {players.map((_, pi) => (
           <div key={pi} className="flex items-center justify-center py-2">
-            <span className={`text-xl font-black tabular-nums ${totals[pi] > 0 ? 'text-amber-300' : 'text-white/25'}`}>
+            <span className="text-xl font-black tabular-nums" style={{ color: totals[pi] > 0 ? '#a78bfa' : textFaint }}>
               {totals[pi] || '—'}
             </span>
           </div>
