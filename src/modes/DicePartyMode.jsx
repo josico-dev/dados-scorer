@@ -220,7 +220,7 @@ export default function DicePartyMode({ modeToggle }) {
           {/* Dados */}
           <div className="flex justify-center gap-2">
             {dice.map((val, i) => (
-              <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
+              <Die key={i} index={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
             ))}
           </div>
 

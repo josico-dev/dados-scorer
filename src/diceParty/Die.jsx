@@ -1,7 +1,7 @@
 // ─── Componente SVG de un dado ─────────────────────────────────────────────
-// Animación: parpadeo de caras aleatorias mientras rueda, luego muestra el valor final.
+// Cada dado tiene un color propio y animación de giro al lanzar.
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 const PIP_POSITIONS = {
   1: [[30, 30]],
@@ -12,44 +12,28 @@ const PIP_POSITIONS = {
   6: [[18, 15], [42, 15], [18, 30], [42, 30], [18, 45], [42, 45]],
 }
 
-function randomFace() { return Math.ceil(Math.random() * 6) }
+// Color de cada dado por índice (0–4)
+const DIE_COLORS = [
+  { bg: '#1e3a5f', border: '#3b82f6', pip: '#93c5fd', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // azul
+  { bg: '#3b1f1f', border: '#ef4444', pip: '#fca5a5', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // rojo
+  { bg: '#1a3320', border: '#22c55e', pip: '#86efac', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // verde
+  { bg: '#2d1f3d', border: '#a855f7', pip: '#d8b4fe', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // morado
+  { bg: '#2d2010', border: '#f97316', pip: '#fdba74', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // naranja
+]
 
-export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
-  // displayValue: lo que se muestra (parpadea mientras anima, luego value)
-  const [displayValue, setDisplayValue] = useState(value)
-  const [shaking,      setShaking]      = useState(false)
-  const intervalRef = useRef(null)
-  const timeoutRef  = useRef(null)
+export default function Die({ value, locked, rolling, onClick, className = '', size = 64, index = 0 }) {
+  const [animKey, setAnimKey] = useState(0)
 
+  // Reinicia la animación en cada tirada (solo si no está bloqueado)
   useEffect(() => {
-    if (rolling && !locked) {
-      setShaking(true)
+    if (rolling && !locked) setAnimKey(k => k + 1)
+  }, [rolling, locked])
 
-      // Parpadea caras aleatorias cada 60ms durante 400ms
-      intervalRef.current = setInterval(() => {
-        setDisplayValue(randomFace())
-      }, 60)
-
-      // Al final muestra el valor real y para
-      timeoutRef.current = setTimeout(() => {
-        clearInterval(intervalRef.current)
-        setDisplayValue(value)
-        setShaking(false)
-      }, 420)
-    } else {
-      setDisplayValue(value)
-    }
-
-    return () => {
-      clearInterval(intervalRef.current)
-      clearTimeout(timeoutRef.current)
-    }
-  }, [rolling, value, locked])
-
-  const pips        = displayValue >= 1 && displayValue <= 6 ? PIP_POSITIONS[displayValue] : []
-  const borderColor = locked ? '#f59e0b' : shaking ? '#f59e0b66' : '#94a3b8'
-  const bgColor     = locked ? '#1e1a0e' : shaking ? '#1a2535' : '#1e293b'
-  const pipColor    = locked ? '#f59e0b' : shaking ? '#f8fafc' : '#e2e8f0'
+  const pips   = value >= 1 && value <= 6 ? PIP_POSITIONS[value] : []
+  const colors = DIE_COLORS[index % DIE_COLORS.length]
+  const bg     = locked ? colors.locked       : colors.bg
+  const border = locked ? colors.lockedBorder : colors.border
+  const pip    = locked ? colors.lockedPip    : colors.pip
 
   return (
     <button
@@ -59,38 +43,51 @@ export default function Die({ value, locked, rolling, onClick, className = '', s
       aria-label={value ? `Dado ${value}${locked ? ' (bloqueado)' : ''}` : 'Dado'}
     >
       <svg
+        key={animKey}
         viewBox="0 0 60 60"
         width={size}
         height={size}
+        className={rolling && !locked ? 'die-spinning' : ''}
         style={{
           display: 'block',
-          transition: shaking ? 'none' : 'filter 0.3s',
           filter: locked
-            ? 'drop-shadow(0 0 8px #f59e0baa)'
-            : shaking
-              ? 'drop-shadow(0 0 10px #ffffff44) brightness(1.15)'
-              : 'none',
-          animation: shaking ? 'die-shake 0.08s infinite alternate' : 'none',
+            ? `drop-shadow(0 0 8px ${colors.lockedBorder}99)`
+            : `drop-shadow(0 0 5px ${colors.border}66)`,
+          transition: 'filter 0.2s',
         }}
       >
-        <rect x="3" y="3" width="54" height="54" rx="10"
-          fill={bgColor} stroke={borderColor} strokeWidth={shaking ? 4 : 3}
-          style={{ transition: shaking ? 'none' : 'all 0.2s' }}
-        />
+        {/* Sombra interior */}
+        <defs>
+          <linearGradient id={`grad-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
+          </linearGradient>
+        </defs>
+
+        {/* Fondo del dado */}
+        <rect x="3" y="3" width="54" height="54" rx="11"
+          fill={bg} stroke={border} strokeWidth="3" />
+
+        {/* Brillo superior */}
+        <rect x="3" y="3" width="54" height="54" rx="11"
+          fill={`url(#grad-${index})`} />
+
+        {/* Pips */}
         {pips.map(([cx, cy], i) => (
-          <circle key={i} cx={cx} cy={cy} r="5" fill={pipColor}
-            style={{ transition: shaking ? 'none' : 'fill 0.2s' }}
-          />
+          <circle key={i} cx={cx} cy={cy} r="5.5" fill={pip} />
         ))}
-        {!displayValue && (
-          <text x="30" y="38" textAnchor="middle" fontSize="24"
-            fill="#475569" fontWeight="bold">?</text>
+
+        {/* Si no hay valor todavía */}
+        {!value && (
+          <text x="30" y="38" textAnchor="middle" fontSize="22"
+            fill={border} fontWeight="bold" opacity="0.5">?</text>
         )}
       </svg>
 
+      {/* Indicador de bloqueado */}
       {locked && (
-        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center"
-          style={{ fontSize: 9, color: '#000' }}>
+        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow-lg"
+          style={{ fontSize: 10, color: '#000' }}>
           🔒
         </div>
       )}
