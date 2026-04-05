@@ -1,20 +1,31 @@
 // ─── App principal ─────────────────────────────────────────────────────────
 //
-// Gestiona el estado global (jugadores y puntuaciones) y renderiza la tabla.
-// El estado se guarda automáticamente en localStorage para no perder datos.
+// Gestiona la selección de modo de juego (Dados o Dice Party).
+// El modo activo se guarda en localStorage para persistir entre sesiones.
 
 import { useState, useEffect } from 'react'
 
-import { DEFAULT_PLAYERS, ROWS, SUBTYPES } from './config'
+import { DEFAULT_PLAYERS, ROWS } from './config'
 import { loadState, saveState } from './storage'
-import { emptyScores, playerTotal } from './helpers'
-import { DICE_ICONS } from './DiceIcons'
-import ScoreCell from './ScoreCell'
-import PlayersModal from './PlayersModal'
-import ResetModal from './ResetModal'
+import { emptyScores } from './helpers'
+import DadosMode from './modes/DadosMode'
+import DicePartyMode from './modes/DicePartyMode'
+
+// Clave para guardar el modo activo
+const MODE_KEY = 'dados-scorer-mode'
+
+function loadMode() {
+  try { return localStorage.getItem(MODE_KEY) || null } catch { return null }
+}
+function saveMode(mode) {
+  try { localStorage.setItem(MODE_KEY, mode) } catch {}
+}
 
 export default function App() {
-  // Cargamos el estado guardado al iniciar, o usamos los valores por defecto
+  // Modo activo: null (pantalla selección), 'dados', o 'dice-party'
+  const [mode, setMode] = useState(() => loadMode())
+
+  // ── Estado del modo Dados ────────────────────────────────────────────────
   const saved = loadState()
   const [players, setPlayers] = useState(saved?.players ?? DEFAULT_PLAYERS)
   const [scores, setScores]   = useState(saved?.scores  ?? emptyScores(DEFAULT_PLAYERS))
@@ -22,12 +33,18 @@ export default function App() {
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal, setShowResetModal]     = useState(false)
 
-  // Guardamos en localStorage cada vez que cambia algo
+  // Guardar estado Dados en localStorage
   useEffect(() => {
     saveState(players, scores)
   }, [players, scores])
 
-  // Actualiza la puntuación de una celda concreta
+  // Guardar modo activo
+  useEffect(() => {
+    if (mode) saveMode(mode)
+  }, [mode])
+
+  // ── Handlers Dados ───────────────────────────────────────────────────────
+
   function updateScore(playerIndex, rowId, subtype, value) {
     setScores(prev => ({
       ...prev,
@@ -41,7 +58,6 @@ export default function App() {
     }))
   }
 
-  // Guarda los nuevos jugadores preservando las puntuaciones existentes
   function savePlayers(newNames) {
     setPlayers(newNames)
     setScores(prev => {
@@ -58,11 +74,65 @@ export default function App() {
     setShowPlayersModal(false)
   }
 
-  // Borra todas las puntuaciones (los jugadores se mantienen)
   function resetScores() {
     setScores(emptyScores(players))
     setShowResetModal(false)
   }
+
+  // ── Pantalla de selección de modo ────────────────────────────────────────
+
+  if (!mode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center p-6 gap-8">
+        <div className="text-center">
+          <div className="text-6xl mb-3">🎲</div>
+          <h1 className="text-3xl font-black text-amber-300 tracking-wide">Dados Scorer</h1>
+          <p className="text-white/40 text-sm mt-1">Elige un modo de juego</p>
+        </div>
+
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          {/* Modo Dados */}
+          <button
+            onClick={() => setMode('dados')}
+            className="group relative overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-500/10 hover:bg-amber-500/20 p-5 text-left transition-all active:scale-95"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🃏</span>
+              <div>
+                <h2 className="text-lg font-bold text-amber-300">Dados</h2>
+                <p className="text-white/50 text-xs mt-0.5">Marcador manual de dados</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Modo Dice Party */}
+          <button
+            onClick={() => setMode('dice-party')}
+            className="group relative overflow-hidden rounded-2xl border border-sky-400/30 bg-sky-500/10 hover:bg-sky-500/20 p-5 text-left transition-all active:scale-95"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🎳</span>
+              <div>
+                <h2 className="text-lg font-bold text-sky-300">Dice Party</h2>
+                <p className="text-white/50 text-xs mt-0.5">Estilo Yahtzee · 2 jugadores</p>
+              </div>
+            </div>
+            <span className="absolute top-2 right-2 text-[10px] bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              Nuevo
+            </span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Modo Dice Party ───────────────────────────────────────────────────────
+
+  if (mode === 'dice-party') {
+    return <DicePartyMode onExit={() => setMode(null)} />
+  }
+
+  // ── Modo Dados ────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
@@ -70,6 +140,14 @@ export default function App() {
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {/* Botón para volver a la selección de modo */}
+          <button
+            onClick={() => setMode(null)}
+            className="text-white/40 hover:text-white/70 transition text-lg mr-1"
+            aria-label="Volver"
+          >
+            ←
+          </button>
           <span className="text-2xl">🎲</span>
           <h1 className="text-base font-bold tracking-wide text-amber-300">Dados Scorer</h1>
         </div>
@@ -89,106 +167,19 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Tabla de puntuaciones ── */}
-      <div className="overflow-x-auto pb-6">
-        <table
-          className="border-separate border-spacing-0 w-full"
-          style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px` }}
-        >
-          <thead>
-            {/* Fila con nombres de jugadores */}
-            <tr>
-              <th className="sticky left-0 z-20 bg-slate-900 w-12 min-w-[48px]" />
-              {players.map((name, i) => (
-                <th key={i} colSpan={2} className="text-center px-1 pt-3 pb-1">
-                  <span className="block text-sm font-bold text-amber-300 uppercase tracking-wider truncate max-w-[120px] mx-auto">
-                    {name}
-                  </span>
-                </th>
-              ))}
-            </tr>
-
-            {/* Fila con Opcional / Obligado por cada jugador */}
-            <tr>
-              <th className="sticky left-0 z-20 bg-slate-900 text-center px-2 py-1 text-[10px] text-white/40 font-medium uppercase w-12 min-w-[48px]">
-                Cara
-              </th>
-              {players.map((_, pi) =>
-                SUBTYPES.map(sub => (
-                  <th
-                    key={`${pi}-${sub.id}`}
-                    className={`text-center px-1 pb-2 text-xs font-bold uppercase tracking-wider w-16 min-w-[56px] ${sub.id === 'Opc' ? 'text-sky-400' : 'text-emerald-400'}`}
-                  >
-                    {sub.label}
-                  </th>
-                ))
-              )}
-            </tr>
-          </thead>
-
-          <tbody>
-            {/* Una fila por cada cara del dado */}
-            {ROWS.map((row, rowIndex) => (
-              <tr key={row.id} className={rowIndex % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
-
-                {/* Icono de la cara del dado */}
-                <td className={`sticky left-0 z-10 px-2 py-2 whitespace-nowrap ${rowIndex % 2 === 0 ? 'bg-slate-800' : 'bg-slate-900'}`}>
-                  <div className="flex flex-col items-center gap-0.5">
-                    {DICE_ICONS[row.id]}
-                    <span className="text-[10px] text-white/40 font-medium">({row.value})</span>
-                  </div>
-                </td>
-
-                {/* Celdas de puntuación: Opcional y Obligado por cada jugador */}
-                {players.map((_, pi) =>
-                  SUBTYPES.map(sub => (
-                    <td key={`${pi}-${sub.id}`} className="px-1 py-1.5">
-                      <ScoreCell
-                        value={scores[pi]?.[row.id]?.[sub.id] ?? ''}
-                        faceValue={row.value}
-                        onChange={val => updateScore(pi, row.id, sub.id, val)}
-                      />
-                    </td>
-                  ))
-                )}
-              </tr>
-            ))}
-
-            {/* Fila de totales */}
-            <tr className="border-t-2 border-amber-400/40">
-              <td className="sticky left-0 z-10 bg-slate-800 px-2 py-3 text-center">
-                <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">Total</span>
-              </td>
-              {players.map((_, pi) => {
-                const total = playerTotal(scores, pi)
-                return (
-                  <td key={pi} colSpan={2} className="text-center px-1 py-3 bg-slate-800">
-                    <span className={`text-xl font-black tabular-nums ${total > 0 ? 'text-amber-300' : 'text-white/40'}`}>
-                      {total || '—'}
-                    </span>
-                  </td>
-                )
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Modales ── */}
-      {showPlayersModal && (
-        <PlayersModal
-          players={players}
-          onSave={savePlayers}
-          onClose={() => setShowPlayersModal(false)}
-        />
-      )}
-
-      {showResetModal && (
-        <ResetModal
-          onConfirm={resetScores}
-          onClose={() => setShowResetModal(false)}
-        />
-      )}
+      <DadosMode
+        players={players}
+        scores={scores}
+        showPlayersModal={showPlayersModal}
+        showResetModal={showResetModal}
+        onUpdateScore={updateScore}
+        onOpenPlayers={() => setShowPlayersModal(true)}
+        onOpenReset={() => setShowResetModal(true)}
+        onClosePlayers={() => setShowPlayersModal(false)}
+        onCloseReset={() => setShowResetModal(false)}
+        onSavePlayers={savePlayers}
+        onResetScores={resetScores}
+      />
     </div>
   )
 }
