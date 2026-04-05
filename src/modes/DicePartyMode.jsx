@@ -179,7 +179,7 @@ export default function DicePartyMode({ modeToggle }) {
       </header>
 
       {/* Área de juego — min-h-0 necesario para que flex-1 hijo funcione */}
-      <div className="flex-1 min-h-0 flex flex-col gap-2 p-3">
+      <div className="flex-1 min-h-0 flex flex-col gap-1 px-3 pt-2 pb-1">
 
         {/* Scorecard — ocupa el espacio disponible con scroll interno */}
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -211,20 +211,20 @@ export default function DicePartyMode({ modeToggle }) {
         )}
 
         {/* Dados */}
-        <div className="shrink-0 flex justify-center gap-3 py-1">
+        <div className="shrink-0 flex justify-center gap-2">
           {dice.map((val, i) => (
-            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={72} />
+            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={58} />
           ))}
         </div>
 
         {/* Botones */}
-        <div className="shrink-0 flex gap-3 pb-2">
+        <div className="shrink-0 flex gap-2 pb-1">
           <button onClick={handleRoll} disabled={!canRoll}
-            className="flex-1 py-4 rounded-2xl font-black text-base bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
+            className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
             🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
           </button>
           <button onClick={handlePlay} disabled={!canPlay}
-            className="flex-1 py-4 rounded-2xl font-black text-base bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
+            className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
             ✅ JUGAR
           </button>
         </div>
@@ -365,7 +365,7 @@ function Scorecard({
           {players.map((_, pi) => (
             <div key={pi}
               onClick={() => handleClick(combo.id, pi)}
-              className={`h-10 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
+              className={`h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
               {cellContent(combo.id, pi)}
             </div>
           ))}
@@ -412,7 +412,7 @@ function Scorecard({
           {players.map((_, pi) => (
             <div key={pi}
               onClick={() => handleClick(combo.id, pi)}
-              className={`h-10 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
+              className={`h-9 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
               {cellContent(combo.id, pi)}
             </div>
           ))}

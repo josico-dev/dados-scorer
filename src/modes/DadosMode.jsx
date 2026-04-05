@@ -14,8 +14,8 @@ export default function DadosMode({
 }) {
   return (
     <>
-      {/* Scroll solo horizontal, la tabla ocupa su tamaño natural */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto">
+      {/* min-h-0 es clave: permite que este div encoja cuando aparece el DiceRoller */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
         <table
           className="border-separate border-spacing-0 w-full"
           style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px` }}
