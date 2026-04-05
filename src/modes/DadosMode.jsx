@@ -1,5 +1,6 @@
 // ─── Modo Dados ───────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
 import { ROWS, SUBTYPES } from '../config'
 import { DICE_ICONS } from '../DiceIcons'
 import { playerTotal } from '../helpers'
