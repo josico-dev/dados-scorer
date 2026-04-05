@@ -178,55 +178,59 @@ export default function DicePartyMode({ modeToggle }) {
         </div>
       </header>
 
-      {/* Área de juego — min-h-0 necesario para que flex-1 hijo funcione */}
-      <div className="flex-1 min-h-0 flex flex-col gap-1 px-3 pt-2 pb-1">
+      {/* Área de juego */}
+      <div className="flex-1 min-h-0 flex flex-col px-3 pt-2 pb-2 gap-2">
 
-        {/* Scorecard — ocupa el espacio disponible con scroll interno */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-        <Scorecard
-          players={players}
-          scores={scores}
-          potential={potential}
-          selectedCombo={selectedCombo}
-          forcedCombo={forcedCombo}
-          upperSums={upperSums}
-          upperBonuses={upperBonuses}
-          totals={totals}
-          jokerBonuses={gs.jokerBonuses}
-          onSelectCombo={selectCombo}
-          currentPlayer={currentPlayer}
-          hasRolled={hasRolled}
-          phase={phase}
-        />
+        {/* Scorecard — flex-1 con min-h-0 + overflow-y-auto para scroll interno */}
+        <div className="flex-1 min-h-0 overflow-y-auto rounded-2xl">
+          <Scorecard
+            players={players}
+            scores={scores}
+            potential={potential}
+            selectedCombo={selectedCombo}
+            forcedCombo={forcedCombo}
+            upperSums={upperSums}
+            upperBonuses={upperBonuses}
+            totals={totals}
+            jokerBonuses={gs.jokerBonuses}
+            onSelectCombo={selectCombo}
+            currentPlayer={currentPlayer}
+            hasRolled={hasRolled}
+            phase={phase}
+          />
         </div>
 
-        {/* Banner Joker */}
-        {jokerActive && hasRolled && (
-          <div className="shrink-0 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center">
-            🌟 ¡JOKER! +100 bonus
-            {forcedCombo
-              ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
-              : ' · Elige una combinación disponible'}
+        {/* Zona inferior fija: joker + dados + botones */}
+        <div className="shrink-0 flex flex-col gap-2">
+
+          {/* Banner Joker */}
+          {jokerActive && hasRolled && (
+            <div className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center">
+              🌟 ¡JOKER! +100 bonus
+              {forcedCombo
+                ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
+                : ' · Elige una combinación disponible'}
+            </div>
+          )}
+
+          {/* Dados */}
+          <div className="flex justify-center gap-2">
+            {dice.map((val, i) => (
+              <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
+            ))}
           </div>
-        )}
 
-        {/* Dados */}
-        <div className="shrink-0 flex justify-center gap-2">
-          {dice.map((val, i) => (
-            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={58} />
-          ))}
-        </div>
-
-        {/* Botones */}
-        <div className="shrink-0 flex gap-2 pb-1">
-          <button onClick={handleRoll} disabled={!canRoll}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
-            🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
-          </button>
-          <button onClick={handlePlay} disabled={!canPlay}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
-            ✅ JUGAR
-          </button>
+          {/* Botones */}
+          <div className="flex gap-2">
+            <button onClick={handleRoll} disabled={!canRoll}
+              className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
+              🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
+            </button>
+            <button onClick={handlePlay} disabled={!canPlay}
+              className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
+              ✅ JUGAR
+            </button>
+          </div>
         </div>
       </div>
 
