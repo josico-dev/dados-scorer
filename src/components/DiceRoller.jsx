@@ -1,7 +1,7 @@
 // ─── Lanzador de dados para el modo normal ────────────────────────────────
 // Usa los mismos iconos SVG que el scoreboard (DICE_ICONS)
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DICE_ICONS } from '../DiceIcons'
 
 const NUM_DICE  = 5
@@ -65,7 +65,7 @@ function NormalDie({ value, locked, rolling, onClick }) {
   )
 }
 
-export default function DiceRoller({ theme, isDark }) {
+export default function DiceRoller({ theme, isDark, onDiceChange }) {
   const [dice,      setDice]      = useState(Array(NUM_DICE).fill(0))
   const [locked,    setLocked]    = useState(Array(NUM_DICE).fill(false))
   const [rolling,   setRolling]   = useState(false)
@@ -74,6 +74,11 @@ export default function DiceRoller({ theme, isDark }) {
   const hasRolled = rollCount > 0
   const rollsLeft = MAX_ROLLS - rollCount
   const t = theme ?? {}
+
+  // Notifica al padre cada vez que cambian los dados
+  useEffect(() => {
+    onDiceChange?.(dice, hasRolled)
+  }, [dice, hasRolled])
 
   function handleRoll() {
     if (rolling || rollsLeft <= 0) return
@@ -91,7 +96,8 @@ export default function DiceRoller({ theme, isDark }) {
   }
 
   function handleReset() {
-    setDice(Array(NUM_DICE).fill(0))
+    const empty = Array(NUM_DICE).fill(0)
+    setDice(empty)
     setLocked(Array(NUM_DICE).fill(false))
     setRollCount(0)
   }

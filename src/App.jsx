@@ -27,6 +27,9 @@ export default function App() {
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal,   setShowResetModal]   = useState(false)
   const [showDiceRoller,   setShowDiceRoller]   = useState(false)
+  // Estado de los dados compartido con el tablero
+  const [rollerDice,     setRollerDice]     = useState(Array(5).fill(0))
+  const [rollerHasRolled, setRollerHasRolled] = useState(false)
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
@@ -152,8 +155,21 @@ export default function App() {
           onCloseReset={() => setShowResetModal(false)}
           onSavePlayers={savePlayers}
           onResetScores={resetScores}
+          diceActive={showDiceRoller && rollerHasRolled}
+          rollerDice={rollerDice}
         />
-        {showDiceRoller && <div className="shrink-0 safe-bottom"><DiceRoller theme={theme} isDark={isDark} /></div>}
+        {showDiceRoller && (
+          <div className="shrink-0 safe-bottom">
+            <DiceRoller
+              theme={theme}
+              isDark={isDark}
+              onDiceChange={(dice, hasRolled) => {
+                setRollerDice(dice)
+                setRollerHasRolled(hasRolled)
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
