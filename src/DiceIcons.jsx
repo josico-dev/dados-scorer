@@ -3,13 +3,12 @@
 
 const BASE = { viewBox: '0 0 48 48', className: 'w-9 h-9', fill: 'none' }
 
-// AS (valor 6) → rosa/fucsia
+// AS (valor 6) → punto rojo sólido
 function DiceAs() {
   return (
     <svg {...BASE}>
       <rect x="2" y="2" width="44" height="44" rx="8" fill="#2a0f2e" stroke="#ec4899" strokeWidth="2.5"/>
-      <circle cx="24" cy="24" r="9" fill="#ec4899" />
-      <circle cx="24" cy="24" r="4" fill="#f9a8d4" />
+      <circle cx="24" cy="24" r="10" fill="#ef4444" />
     </svg>
   )
 }
