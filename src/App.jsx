@@ -10,6 +10,7 @@ import { loadState, saveState } from './storage'
 import { emptyScores } from './helpers'
 import DadosMode from './modes/DadosMode'
 import DicePartyMode from './modes/DicePartyMode'
+import DiceRoller from './components/DiceRoller'
 
 // Clave para guardar el modo activo
 const MODE_KEY = 'dados-scorer-mode'
@@ -32,6 +33,7 @@ export default function App() {
 
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal, setShowResetModal]     = useState(false)
+  const [showDiceRoller, setShowDiceRoller]     = useState(false)
 
   // Guardar estado Dados en localStorage
   useEffect(() => {
@@ -153,6 +155,12 @@ export default function App() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setShowDiceRoller(v => !v)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${showDiceRoller ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 hover:bg-white/20'}`}
+          >
+            🎲
+          </button>
+          <button
             onClick={() => setShowPlayersModal(true)}
             className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition"
           >
@@ -166,6 +174,9 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Lanzador de dados opcional */}
+      {showDiceRoller && <DiceRoller />}
 
       <DadosMode
         players={players}

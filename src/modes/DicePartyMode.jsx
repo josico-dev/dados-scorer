@@ -227,8 +227,34 @@ export default function DicePartyMode({ onExit }) {
       {/* ── Área de juego ── */}
       <div className="flex-1 flex flex-col gap-3 p-3">
 
-        {/* Dados */}
-        <div className="flex justify-center gap-2 py-2">
+        {/* Scorecard — primero */}
+        <Scorecard
+          scores={scores}
+          potential={potential}
+          selectedCombo={selectedCombo}
+          forcedCombo={forcedCombo}
+          upperSums={upperSums}
+          upperBonuses={upperBonuses}
+          totals={totals}
+          jokerBonuses={gs.jokerBonuses}
+          onSelectCombo={selectCombo}
+          currentPlayer={currentPlayer}
+          hasRolled={hasRolled}
+          phase={phase}
+        />
+
+        {/* Banner Joker */}
+        {jokerActive && hasRolled && (
+          <div className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center leading-snug">
+            🌟 ¡JOKER! +100 bonus
+            {forcedCombo
+              ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
+              : ' · Elige una combinación disponible'}
+          </div>
+        )}
+
+        {/* Dados — debajo del scorecard */}
+        <div className="flex justify-center gap-2 py-1">
           {dice.map((val, i) => (
             <Die
               key={i}
@@ -240,18 +266,8 @@ export default function DicePartyMode({ onExit }) {
           ))}
         </div>
 
-        {/* Banner Joker */}
-        {jokerActive && hasRolled && (
-          <div className="mx-auto px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center leading-snug">
-            🌟 ¡JOKER! +100 bonus
-            {forcedCombo
-              ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
-              : ' · Elige una combinación disponible'}
-          </div>
-        )}
-
         {/* Botones de acción */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 pb-2">
           <button
             onClick={handleRoll}
             disabled={!canRoll}
@@ -271,22 +287,6 @@ export default function DicePartyMode({ onExit }) {
             ✅ JUGAR
           </button>
         </div>
-
-        {/* Scorecard */}
-        <Scorecard
-          scores={scores}
-          potential={potential}
-          selectedCombo={selectedCombo}
-          forcedCombo={forcedCombo}
-          upperSums={upperSums}
-          upperBonuses={upperBonuses}
-          totals={totals}
-          jokerBonuses={gs.jokerBonuses}
-          onSelectCombo={selectCombo}
-          currentPlayer={currentPlayer}
-          hasRolled={hasRolled}
-          phase={phase}
-        />
       </div>
 
       {/* ── Modal reset ── */}
