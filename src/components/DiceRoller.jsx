@@ -1,28 +1,20 @@
 // ─── Lanzador de dados para el modo normal ────────────────────────────────
-// Los dados muestran las caras propias del juego: V(1), VI(2), J(3), Q(4), K(5), AS(6)
+// Usa los mismos iconos SVG que el scoreboard (DICE_ICONS)
 
 import { useState, useEffect } from 'react'
-import { FACE_COLORS } from '../diceParty/Die'
+import { DICE_ICONS } from '../DiceIcons'
 
 const NUM_DICE  = 5
 const MAX_ROLLS = 3
 
-// Caras con letra (J, Q, K) y cara con punto grande (AS=6)
-// V(1) y VI(2) usan pips como un dado real
-const FACE_AS_DOT  = 6  // punto central grande
-const FACE_LABELS  = { 3: 'J', 4: 'Q', 5: 'K' }
-
-// Posiciones de pips para V(1)=5pips y VI(2)=6pips
-const NORMAL_PIPS = {
-  1: [[30,18],[18,30],[30,30],[42,30],[30,42]],           // V → 5 puntos
-  2: [[18,13],[42,13],[18,30],[42,30],[18,47],[42,47]],   // VI → 6 puntos
-}
+// Mapeo valor (1-6) → id de cara del dado del modo normal
+const VALUE_TO_ID = { 1: 'v', 2: 'vi', 3: 'j', 4: 'q', 5: 'k', 6: 'as' }
 
 function rollDice(dice, locked) {
   return dice.map((d, i) => locked[i] ? d : Math.ceil(Math.random() * 6))
 }
 
-// Dado SVG con etiqueta del modo normal
+// Dado que muestra el icono del scoreboard, con animación y estado de bloqueo
 function NormalDie({ value, locked, rolling, onClick }) {
   const [animKey, setAnimKey] = useState(0)
 
@@ -30,65 +22,44 @@ function NormalDie({ value, locked, rolling, onClick }) {
     if (rolling && !locked) setAnimKey(k => k + 1)
   }, [rolling, locked])
 
-  const colors = locked
-    ? { bg: '#1e293b', border: '#ffffff', pip: '#ffffff', glow: '#ffffff99' }
-    : (FACE_COLORS[value] ?? FACE_COLORS[0])
-
-  const size = 58
+  const icon = value ? DICE_ICONS[VALUE_TO_ID[value]] : null
 
   return (
     <button
       onClick={onClick}
       className="relative touch-manipulation select-none focus:outline-none"
-      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      style={{ width: 52, height: 52 }}
     >
-      <svg
+      {/* Icono del scoreboard, escalado y animado */}
+      <div
         key={animKey}
-        viewBox="0 0 60 60"
-        width={size}
-        height={size}
         className={rolling && !locked ? 'die-spinning' : ''}
         style={{
-          display: 'block',
-          filter: `drop-shadow(0 0 ${locked ? 8 : 5}px ${colors.glow ?? colors.border + '88'})`,
-          transition: 'filter 0.2s',
+          width: 52, height: 52,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          filter: locked
+            ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)'
+            : 'none',
+          opacity: value ? 1 : 0.35,
+          transition: 'filter 0.2s, opacity 0.2s',
+          // Escala el SVG (que es w-9 h-9 = 36px) a 52px
+          transform: 'scale(1.44)',
+          transformOrigin: 'center',
         }}
       >
-        <defs>
-          <linearGradient id={`ng-${value}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
-          </linearGradient>
-        </defs>
-        <rect x="3" y="3" width="54" height="54" rx="12"
-          fill={colors.bg} stroke={colors.border} strokeWidth="3.5" />
-        <rect x="3" y="3" width="54" height="54" rx="12"
-          fill={`url(#ng-${value})`} />
-
-        {value === FACE_AS_DOT ? (
-          // AS → punto central grande
-          <circle cx="30" cy="30" r="10" fill={colors.pip ?? colors.border} />
-        ) : NORMAL_PIPS[value] ? (
-          // V (1→5 pips) y VI (2→6 pips) → puntitos como dado real
-          NORMAL_PIPS[value].map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r="5" fill={colors.pip ?? colors.border} />
-          ))
-        ) : value >= 3 ? (
-          // J, Q, K → letra
-          <text x="30" y="36" textAnchor="middle" fontSize="20"
-            fill={colors.pip ?? colors.border} fontWeight="900" fontFamily="system-ui, sans-serif">
-            {FACE_LABELS[value]}
-          </text>
-        ) : (
-          // Sin lanzar → ?
-          <text x="30" y="38" textAnchor="middle" fontSize="22"
-            fill={colors.border} fontWeight="bold" opacity="0.4">?</text>
+        {icon ?? (
+          // Sin valor todavía: dado neutro con ?
+          <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none">
+            <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="2.5"/>
+            <text x="24" y="32" textAnchor="middle" fontSize="20" fill="#475569" fontWeight="bold">?</text>
+          </svg>
         )}
-      </svg>
+      </div>
 
+      {/* Indicador de bloqueado */}
       {locked && (
         <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center shadow"
-          style={{ fontSize: 8, color: '#000' }}>🔒</div>
+          style={{ fontSize: 8, color: '#000', zIndex: 10 }}>🔒</div>
       )}
     </button>
   )
@@ -127,10 +98,13 @@ export default function DiceRoller({ theme, isDark }) {
 
   return (
     <div className="mx-3 mb-3 rounded-2xl p-3 flex flex-col gap-2"
-      style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
+      style={{
+        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+      }}>
 
-      {/* Dados con caras del modo normal */}
-      <div className="flex justify-center gap-2">
+      {/* Dados con los mismos iconos que el scoreboard */}
+      <div className="flex justify-center gap-3 items-center" style={{ height: 58 }}>
         {dice.map((val, i) => (
           <NormalDie key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} />
         ))}
@@ -144,7 +118,6 @@ export default function DiceRoller({ theme, isDark }) {
           🎲 Lanzar
         </button>
 
-        {/* Contador */}
         <div className="flex gap-1">
           {[1, 2, 3].map(n => (
             <div key={n}
