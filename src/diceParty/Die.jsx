@@ -21,7 +21,7 @@ const PIP_POSITIONS = {
  * @param {function} onClick  - Callback al hacer clic
  * @param {string}   className - Clases adicionales
  */
-export default function Die({ value, locked, rolling, onClick, className = '' }) {
+export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
   const pips = value >= 1 && value <= 6 ? PIP_POSITIONS[value] : []
 
   // Color del borde según estado
@@ -37,13 +37,13 @@ export default function Die({ value, locked, rolling, onClick, className = '' })
     <button
       onClick={onClick}
       className={`relative touch-manipulation select-none focus:outline-none ${className}`}
-      style={{ width: 64, height: 64, minWidth: 64, minHeight: 64 }}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
       aria-label={value ? `Dado ${value}${locked ? ' (bloqueado)' : ''}` : 'Dado'}
     >
       <svg
         viewBox="0 0 60 60"
-        width="64"
-        height="64"
+        width={size}
+        height={size}
         style={{
           filter: rolling ? 'brightness(0.7)' : locked ? 'drop-shadow(0 0 6px #f59e0b88)' : 'none',
           transition: 'filter 0.15s',

@@ -208,21 +208,21 @@ export default function DicePartyMode({ modeToggle }) {
           </div>
         )}
 
-        {/* Dados */}
-        <div className="flex justify-center gap-2 py-1">
+        {/* Dados más grandes */}
+        <div className="flex justify-center gap-3 py-2">
           {dice.map((val, i) => (
-            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} />
+            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={72} />
           ))}
         </div>
 
-        {/* Botones */}
-        <div className="flex gap-2 pb-2">
+        {/* Botones más grandes */}
+        <div className="flex gap-3 pb-3">
           <button onClick={handleRoll} disabled={!canRoll}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40">
+            className="flex-1 py-4 rounded-2xl font-black text-base bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40 active:scale-95">
             🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
           </button>
           <button onClick={handlePlay} disabled={!canPlay}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40">
+            className="flex-1 py-4 rounded-2xl font-black text-base bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40 active:scale-95">
             ✅ JUGAR
           </button>
         </div>
@@ -292,97 +292,100 @@ function Scorecard({
     onSelectCombo(comboId)
   }
 
-  // Ancho de columna de jugador según cuántos hay
-  const colW = players.length <= 2 ? 'w-12' : players.length <= 3 ? 'w-10' : 'w-8'
+  // Ancho de columna según número de jugadores
+  const colW  = players.length <= 2 ? 'w-16' : players.length <= 3 ? 'w-14' : 'w-12'
+  const colPx = players.length <= 2 ? 64     : players.length <= 3 ? 56     : 48
+
+  const gridCols = `1fr ${players.map(() => `${colPx}px`).join(' ')}`
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-800/60 text-xs">
+    <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-800/60">
 
-      {/* Cabecera: combo + un col por jugador */}
-      <div className={`grid items-center bg-slate-700/60 border-b border-white/10`}
-           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-        <div className="py-1.5 pl-2 text-[10px] text-white/30 font-semibold uppercase tracking-wider">Combinación</div>
+      {/* Cabecera */}
+      <div className="grid items-center bg-slate-700/60 border-b border-white/10"
+           style={{ gridTemplateColumns: gridCols }}>
+        <div className="py-2 pl-3 text-xs text-white/30 font-semibold uppercase tracking-wider">Combinación</div>
         {players.map((name, pi) => (
-          <div key={pi} className={`${colW} text-center py-1.5 text-[10px] font-bold truncate px-1 ${pi === currentPlayer && phase === 'playing' ? 'text-amber-300' : 'text-white/40'}`}>
+          <div key={pi} className={`text-center py-2 text-xs font-bold truncate px-1 ${pi === currentPlayer && phase === 'playing' ? 'text-amber-300' : 'text-white/40'}`}>
             {name.split(' ')[0]}
           </div>
         ))}
       </div>
 
-      {/* Separador Upper */}
-      <div className="px-2 py-0.5 bg-slate-900/40 border-b border-white/5">
-        <span className="text-[9px] text-white/25 uppercase tracking-widest font-bold">Superior</span>
+      {/* Separador Superior */}
+      <div className="px-3 py-1 bg-slate-900/40 border-b border-white/5">
+        <span className="text-[10px] text-white/25 uppercase tracking-widest font-bold">Superior</span>
       </div>
 
       {/* Filas Upper */}
       {UPPER_COMBOS.map((combo, ri) => (
         <div key={combo.id}
-          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
-          style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-          <div className="flex items-center gap-1.5 pl-2 py-1">
+          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.03]' : ''}`}
+          style={{ gridTemplateColumns: gridCols }}>
+          <div className="flex items-center gap-2 pl-3 py-2">
             <MiniDie value={combo.upperValue} />
-            <span className="text-white/70 text-[11px]">{combo.badge}</span>
+            <span className="text-white/80 text-sm font-medium">{combo.badge}</span>
           </div>
           {players.map((_, pi) => (
             <div key={pi}
               onClick={() => handleClick(combo.id, pi)}
-              className={`${colW} h-7 flex items-center justify-center text-xs font-bold rounded mx-0.5 transition-colors ${cellClass(combo.id, pi)}`}>
+              className={`h-10 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
               {cellContent(combo.id, pi)}
             </div>
           ))}
         </div>
       ))}
 
-      {/* Fila bonus upper */}
+      {/* Bonus upper */}
       <div className="grid items-center bg-slate-900/30 border-b border-white/10"
-           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-        <div className="pl-2 py-1">
-          <span className="text-[10px] text-amber-400/70 font-bold">Bonus +35 </span>
-          <span className="text-[9px] text-white/25">(&gt;62)</span>
+           style={{ gridTemplateColumns: gridCols }}>
+        <div className="pl-3 py-1.5 flex items-center gap-1">
+          <span className="text-xs text-amber-400/70 font-bold">Bonus +35</span>
+          <span className="text-[10px] text-white/25">(&gt;62)</span>
         </div>
         {players.map((_, pi) => (
-          <div key={pi} className={`${colW} flex flex-col items-center py-0.5`}>
-            <span className={`text-[10px] font-bold ${upperBonuses[pi] ? 'text-amber-300' : 'text-white/20'}`}>
+          <div key={pi} className="flex flex-col items-center py-1">
+            <span className={`text-xs font-bold ${upperBonuses[pi] ? 'text-amber-300' : 'text-white/20'}`}>
               {upperBonuses[pi] ? '+35' : '—'}
             </span>
-            <span className="text-[9px] text-white/25">{upperSums[pi]}</span>
+            <span className="text-[10px] text-white/30">{upperSums[pi]}</span>
           </div>
         ))}
       </div>
 
-      {/* Separador Lower */}
-      <div className="px-2 py-0.5 bg-slate-900/40 border-b border-white/5">
-        <span className="text-[9px] text-white/25 uppercase tracking-widest font-bold">Inferior</span>
+      {/* Separador Inferior */}
+      <div className="px-3 py-1 bg-slate-900/40 border-b border-white/5">
+        <span className="text-[10px] text-white/25 uppercase tracking-widest font-bold">Inferior</span>
       </div>
 
       {/* Filas Lower */}
       {LOWER_COMBOS.map((combo, ri) => (
         <div key={combo.id}
-          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
-          style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-          <div className="pl-2 py-1 flex items-center gap-1">
-            <span className="text-white/70 text-[11px]">{combo.badge}</span>
-            {combo.fixedScore && <span className="text-[9px] text-white/25">({combo.fixedScore})</span>}
+          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.03]' : ''}`}
+          style={{ gridTemplateColumns: gridCols }}>
+          <div className="pl-3 py-2 flex items-center gap-1.5">
+            <span className="text-white/80 text-sm font-medium">{combo.badge}</span>
+            {combo.fixedScore && <span className="text-[10px] text-white/30">({combo.fixedScore})</span>}
           </div>
           {players.map((_, pi) => (
             <div key={pi}
               onClick={() => handleClick(combo.id, pi)}
-              className={`${colW} h-7 flex items-center justify-center text-xs font-bold rounded mx-0.5 transition-colors ${cellClass(combo.id, pi)}`}>
+              className={`h-10 flex items-center justify-center text-sm font-bold rounded-lg mx-1 transition-colors ${cellClass(combo.id, pi)}`}>
               {cellContent(combo.id, pi)}
             </div>
           ))}
         </div>
       ))}
 
-      {/* Fila bonus Joker */}
+      {/* Bonus Joker */}
       <div className="grid items-center bg-slate-900/30 border-b border-white/10"
-           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-        <div className="pl-2 py-1">
-          <span className="text-[10px] text-purple-300/70 font-bold">🌟 Joker ×100</span>
+           style={{ gridTemplateColumns: gridCols }}>
+        <div className="pl-3 py-1.5">
+          <span className="text-xs text-purple-300/70 font-bold">🌟 Joker ×100</span>
         </div>
         {players.map((_, pi) => (
-          <div key={pi} className={`${colW} flex items-center justify-center py-1`}>
-            <span className={`text-[10px] font-bold ${jokerBonuses[pi] > 0 ? 'text-purple-300' : 'text-white/20'}`}>
+          <div key={pi} className="flex items-center justify-center py-1.5">
+            <span className={`text-xs font-bold ${jokerBonuses[pi] > 0 ? 'text-purple-300' : 'text-white/20'}`}>
               {jokerBonuses[pi] > 0 ? `+${jokerBonuses[pi] * 100}` : '—'}
             </span>
           </div>
@@ -391,11 +394,11 @@ function Scorecard({
 
       {/* Totales */}
       <div className="grid border-t-2 border-amber-400/30 bg-slate-900/50"
-           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
-        <div className="pl-2 py-2 text-[10px] text-white/30 font-bold uppercase tracking-wider self-center">Total</div>
-        {players.map((name, pi) => (
-          <div key={pi} className={`${colW} flex flex-col items-center py-1.5 ${pi < players.length - 1 ? '' : ''}`}>
-            <span className={`text-lg font-black tabular-nums ${totals[pi] > 0 ? 'text-amber-300' : 'text-white/25'}`}>
+           style={{ gridTemplateColumns: gridCols }}>
+        <div className="pl-3 py-3 text-xs text-white/30 font-bold uppercase tracking-wider self-center">Total</div>
+        {players.map((_, pi) => (
+          <div key={pi} className="flex items-center justify-center py-2">
+            <span className={`text-xl font-black tabular-nums ${totals[pi] > 0 ? 'text-amber-300' : 'text-white/25'}`}>
               {totals[pi] || '—'}
             </span>
           </div>
