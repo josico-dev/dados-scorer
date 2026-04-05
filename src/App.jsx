@@ -85,7 +85,7 @@ export default function App() {
 
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
+    <div className="app-shell bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
       <header className="shrink-0 bg-slate-900/80 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
         <span className="text-xl">🎲</span>
         <ModeToggle />

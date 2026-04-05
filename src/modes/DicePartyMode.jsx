@@ -159,7 +159,7 @@ export default function DicePartyMode({ modeToggle }) {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
+    <div className="app-shell bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none">
 
       {/* Header */}
       <header className="shrink-0 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
