@@ -23,8 +23,8 @@ export const FACE_COLORS = {
   0: { bg: '#1e293b', border: '#475569', pip: '#94a3b8', glow: '#47556944' }, // sin valor
 }
 
-// Bloqueado: verde lima (diferente del amarillo valor-2)
-export const LOCKED_COLORS = { bg: '#0f200f', border: '#84cc16', pip: '#d9f99d', glow: '#84cc1699' }
+// Bloqueado: blanco — no se confunde con ningún valor
+export const LOCKED_COLORS = { bg: '#1e293b', border: '#ffffff', pip: '#ffffff', glow: '#ffffff99' }
 
 export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
   const [animKey, setAnimKey] = useState(0)
