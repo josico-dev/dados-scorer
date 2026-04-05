@@ -12,14 +12,19 @@ import ResetModal from '../ResetModal'
 const ROW_DICE_VALUE = { as: 6, k: 5, q: 4, j: 3, vi: 2, v: 1 }
 
 /**
- * Calcula cuántos dados tienen el valor de una cara y devuelve la puntuación sugerida.
- * Ej: cara AS (valor 6), dados [6,6,3,6,1] → 3 dados → 3 es el número de dados
- * El usuario apunta el número de dados, y la celda multiplica por el valor de cara.
+ * Calcula cuántos dados son válidos para una fila, teniendo en cuenta que
+ * el AS (dado mostrando 6) es comodín y cuenta para cualquier fila.
+ * Devuelve el número de dados a apuntar (la celda multiplica por el valor de cara).
  */
 function suggestDice(rowId, rollerDice) {
-  const faceNum = ROW_DICE_VALUE[rowId]  // qué número de dado corresponde a esta cara
-  const count = rollerDice.filter(d => d === faceNum).length
-  return count  // número de dados a apuntar
+  const faceNum = ROW_DICE_VALUE[rowId]
+  const AS_VALUE = 6  // el AS en el dado
+
+  return rollerDice.filter(d => {
+    if (d === faceNum) return true                      // dado exacto de esa cara
+    if (d === AS_VALUE && rowId !== 'as') return true   // AS comodín (menos en la fila del AS)
+    return false
+  }).length
 }
 
 export default function DadosMode({
