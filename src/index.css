@@ -33,21 +33,13 @@
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 
-  /* ── Animación de dados ── */
-  @keyframes dice-roll {
-    0%   { transform: rotateX(0deg)   rotateY(0deg)   rotateZ(0deg)   scale(1);    }
-    20%  { transform: rotateX(180deg) rotateY(90deg)  rotateZ(60deg)  scale(0.82); }
-    45%  { transform: rotateX(270deg) rotateY(200deg) rotateZ(140deg) scale(0.88); }
-    70%  { transform: rotateX(320deg) rotateY(310deg) rotateZ(250deg) scale(0.85); }
-    88%  { transform: rotateX(360deg) rotateY(360deg) rotateZ(340deg) scale(1.08); }
-    100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1);    }
-  }
-
-  .die-rolling {
-    animation: dice-roll 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    transform-origin: center center;
-    /* Perspectiva para que el giro 3D se vea bien */
-    perspective: 200px;
+  /* ── Animación de dados: vibración lateral mientras parpadean las caras ── */
+  @keyframes die-shake {
+    0%   { transform: translate(-2px, -1px) rotate(-3deg) scale(1.05); }
+    25%  { transform: translate(2px,  1px)  rotate(3deg)  scale(1.04); }
+    50%  { transform: translate(-1px, 2px)  rotate(-2deg) scale(1.06); }
+    75%  { transform: translate(1px, -2px)  rotate(2deg)  scale(1.04); }
+    100% { transform: translate(-2px, 1px)  rotate(-3deg) scale(1.05); }
   }
 
   /* En pantallas anchas (tablet/desktop): centrar y limitar ancho para que no quede raro */
