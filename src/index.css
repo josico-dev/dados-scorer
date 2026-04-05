@@ -4,19 +4,43 @@
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    /* Fuente base responsive: más grande en pantallas grandes */
+    font-size: clamp(14px, 2vw, 16px);
   }
+
   body, #root {
     height: 100dvh;
     overflow: hidden;
   }
-  /* Espacio extra para la barra del sistema (home indicator Android/iOS) */
-  .safe-bottom {
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
+
+  /* Shell principal de la app — misma altura en todos los dispositivos */
   .app-shell {
     height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Safe areas para muescas y home indicators (iPhone, Android) */
+    padding-left:  env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Padding inferior seguro para botones/contenido al borde */
+  .safe-bottom {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  /* En pantallas anchas (tablet/desktop): centrar y limitar ancho para que no quede raro */
+  @media (min-width: 640px) {
+    .app-shell {
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      /* Borde sutil para separar del fondo en desktop */
+      box-shadow: 0 0 60px rgba(0,0,0,0.5);
+    }
+    /* El fondo del body en desktop */
+    body {
+      background: #0a0f1a;
+    }
   }
 }
