@@ -1,45 +1,30 @@
 // ─── Modo Dice Party (estilo Yahtzee) ──────────────────────────────────────
-//
-// Juego para 2 jugadores con 5 dados y 13 combinaciones.
-// Estado guardado en localStorage bajo la clave 'dice-party-state'.
 
 import { useState, useEffect, useCallback } from 'react'
 import Die from '../diceParty/Die'
-import { UPPER_COMBOS, LOWER_COMBOS, ALL_COMBOS, UPPER_ID_BY_VALUE } from '../diceParty/combinations'
-import {
-  scoreCombo,
-  calcPotential,
-  detectJoker,
-  calcUpperSum,
-  calcTotal,
-} from '../diceParty/scoring'
+import { UPPER_COMBOS, LOWER_COMBOS, ALL_COMBOS } from '../diceParty/combinations'
+import { calcPotential, detectJoker, calcUpperSum, calcTotal } from '../diceParty/scoring'
+import PlayersModal from '../PlayersModal'
 
-// ── Constantes ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'dice-party-state'
+const MAX_ROLLS   = 3
+const TOTAL_TURNS = 13  // por jugador
 
-const STORAGE_KEY  = 'dice-party-state'
-const NUM_DICE     = 5
-const MAX_ROLLS    = 3
-const TOTAL_TURNS  = 13   // combinaciones por jugador → 26 turnos totales
-const JOKER_BONUS  = 100
-const UPPER_BONUS_THRESHOLD = 62
-const UPPER_BONUS_VALUE     = 35
-const PLAYER_NAMES = ['Ellos', 'Tú']
-
-// ── Estado inicial ───────────────────────────────────────────────────────────
+// ── Helpers de estado ─────────────────────────────────────────────────────
 
 function emptyPlayerScores() {
   const s = {}
-  ALL_COMBOS.forEach(c => { s[c.id] = null }) // null = no jugado aún
+  ALL_COMBOS.forEach(c => { s[c.id] = null })
   return s
 }
 
-function initialState() {
+function initialState(players) {
   return {
+    players,
     currentPlayer : 0,
-    scores        : [emptyPlayerScores(), emptyPlayerScores()],
-    jokerBonuses  : [0, 0],   // bonus Joker acumulados por jugador
-    turn          : 0,        // turno global (0-25)
-    // Estado del turno en curso
+    scores        : players.map(() => emptyPlayerScores()),
+    jokerBonuses  : players.map(() => 0),
+    turn          : 0,
     dice          : [0, 0, 0, 0, 0],
     locked        : [false, false, false, false, false],
     rollsLeft     : MAX_ROLLS,
@@ -47,42 +32,35 @@ function initialState() {
     selectedCombo : null,
     jokerActive   : false,
     jokerUpperId  : null,
-    phase         : 'playing', // 'playing' | 'done'
+    phase         : 'playing',
   }
 }
-
-// ── Persistencia ─────────────────────────────────────────────────────────────
-
-function loadDPState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch { return null }
-}
-
-function saveDPState(state) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
-}
-
-// ── Helper: lanza dados no bloqueados ────────────────────────────────────────
 
 function rollDice(dice, locked) {
   return dice.map((d, i) => locked[i] ? d : Math.ceil(Math.random() * 6))
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+function loadDPState() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null } catch { return null }
+}
+function saveDPState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) } catch {}
+}
 
-export default function DicePartyMode({ onExit }) {
-  const [gs, setGs]         = useState(() => loadDPState() ?? initialState())
+const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
+
+// ── Componente principal ──────────────────────────────────────────────────
+
+export default function DicePartyMode({ modeToggle }) {
+  const [gs, setGs]           = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
   const [rolling, setRolling] = useState(false)
-  const [showReset, setShowReset] = useState(false)
+  const [showReset, setShowReset]     = useState(false)
+  const [showPlayers, setShowPlayers] = useState(false)
 
-  // Persistir cada vez que cambia el estado del juego
   useEffect(() => { saveDPState(gs) }, [gs])
 
-  // ── Acciones ──────────────────────────────────────────────────────────────
+  // ── Acciones de turno ─────────────────────────────────────────────────
 
-  /** Lanza los dados no bloqueados (animación breve) */
   const handleRoll = useCallback(() => {
     if (rolling || gs.rollsLeft <= 0 || gs.phase !== 'playing') return
     setRolling(true)
@@ -90,62 +68,39 @@ export default function DicePartyMode({ onExit }) {
       setGs(prev => {
         const newDice = rollDice(prev.dice, prev.locked)
         const { jokerActive, jokerUpperId } = detectJoker(newDice, prev.scores[prev.currentPlayer])
-        return {
-          ...prev,
-          dice         : newDice,
-          rollsLeft    : prev.rollsLeft - 1,
-          hasRolled    : true,
-          jokerActive,
-          jokerUpperId,
-          selectedCombo: null,
-        }
+        return { ...prev, dice: newDice, rollsLeft: prev.rollsLeft - 1, hasRolled: true, jokerActive, jokerUpperId, selectedCombo: null }
       })
       setRolling(false)
     }, 280)
   }, [rolling, gs.rollsLeft, gs.phase])
 
-  /** Bloquea / desbloquea un dado */
   function toggleLock(i) {
     if (!gs.hasRolled || gs.phase !== 'playing') return
-    setGs(prev => {
-      const locked = [...prev.locked]
-      locked[i] = !locked[i]
-      return { ...prev, locked }
-    })
+    setGs(prev => { const l = [...prev.locked]; l[i] = !l[i]; return { ...prev, locked: l } })
   }
 
-  /** Selecciona (o deselecciona) una combinación del scorecard */
-  function selectCombo(comboId, available) {
-    if (!gs.hasRolled || !available || gs.phase !== 'playing') return
-    setGs(prev => ({
-      ...prev,
-      selectedCombo: prev.selectedCombo === comboId ? null : comboId,
-    }))
+  function selectCombo(comboId) {
+    if (!gs.hasRolled || gs.phase !== 'playing') return
+    const pot = calcPotential(gs.dice, gs.scores[gs.currentPlayer], gs.jokerActive, gs.jokerUpperId)
+    if (!pot[comboId]?.available) return
+    setGs(prev => ({ ...prev, selectedCombo: prev.selectedCombo === comboId ? null : comboId }))
   }
 
-  /** Confirma la jugada con la combinación seleccionada */
   function handlePlay() {
     if (!gs.selectedCombo || !gs.hasRolled) return
-
-    const { jokerActive, jokerUpperId, currentPlayer, scores, dice, jokerBonuses } = gs
-    const playerScores = scores[currentPlayer]
-    const potential = calcPotential(dice, playerScores, jokerActive, jokerUpperId)
+    const { currentPlayer, scores, dice, jokerBonuses, jokerActive, jokerUpperId } = gs
+    const potential = calcPotential(dice, scores[currentPlayer], jokerActive, jokerUpperId)
     const entry = potential[gs.selectedCombo]
     if (!entry?.available) return
 
-    // Aplica la puntuación
     const newScores = scores.map((ps, pi) =>
       pi !== currentPlayer ? ps : { ...ps, [gs.selectedCombo]: entry.score }
     )
+    const newJokerBonuses = jokerBonuses.map((b, pi) => pi === currentPlayer && jokerActive ? b + 1 : b)
 
-    // Acumula bonus joker si aplica
-    const newJokerBonuses = [...jokerBonuses]
-    if (jokerActive) newJokerBonuses[currentPlayer] += 1
-
-    // Avanza turno
-    const nextPlayer = currentPlayer === 0 ? 1 : 0
+    const nextPlayer = (currentPlayer + 1) % gs.players.length
     const nextTurn   = gs.turn + 1
-    const gameOver   = nextTurn >= TOTAL_TURNS * 2
+    const gameOver   = nextTurn >= TOTAL_TURNS * gs.players.length
 
     setGs(prev => ({
       ...prev,
@@ -164,71 +119,63 @@ export default function DicePartyMode({ onExit }) {
     }))
   }
 
-  /** Reinicia la partida */
   function handleReset() {
-    setGs(initialState())
+    setGs(initialState(gs.players))
     setShowReset(false)
   }
 
-  // ── Datos derivados ───────────────────────────────────────────────────────
+  // Guardar jugadores preservando puntuaciones existentes
+  function savePlayers(names) {
+    setGs(prev => ({
+      ...initialState(names),
+      // Preservar puntuaciones de jugadores que siguen existiendo
+      scores       : names.map((_, i) => prev.scores[i] ?? emptyPlayerScores()),
+      jokerBonuses : names.map((_, i) => prev.jokerBonuses[i] ?? 0),
+    }))
+    setShowPlayers(false)
+  }
 
-  const {
-    currentPlayer, scores, dice, locked, rollsLeft,
-    hasRolled, jokerActive, jokerUpperId, selectedCombo, phase,
-  } = gs
+  // ── Datos derivados ────────────────────────────────────────────────────
 
-  const potential = hasRolled
-    ? calcPotential(dice, scores[currentPlayer], jokerActive, jokerUpperId)
-    : null
+  const { currentPlayer, scores, dice, locked, rollsLeft, hasRolled,
+          jokerActive, jokerUpperId, selectedCombo, phase, players } = gs
 
-  const totals     = [0, 1].map(pi => calcTotal(scores[pi], gs.jokerBonuses[pi]))
-  const upperSums  = [0, 1].map(pi => calcUpperSum(scores[pi]))
-  const upperBonuses = upperSums.map(s => s > UPPER_BONUS_THRESHOLD ? UPPER_BONUS_VALUE : 0)
+  const potential     = hasRolled ? calcPotential(dice, scores[currentPlayer], jokerActive, jokerUpperId) : null
+  const upperSums     = players.map((_, pi) => calcUpperSum(scores[pi]))
+  const upperBonuses  = upperSums.map(s => s > 62 ? 35 : 0)
+  const totals        = players.map((_, pi) => calcTotal(scores[pi], gs.jokerBonuses[pi]))
+  const forcedCombo   = jokerActive && jokerUpperId && scores[currentPlayer][jokerUpperId] === null ? jokerUpperId : null
+  const canRoll       = !rolling && rollsLeft > 0 && phase === 'playing'
+  const canPlay       = hasRolled && selectedCombo !== null && phase === 'playing'
 
-  const canRoll = !rolling && rollsLeft > 0 && phase === 'playing'
-  const canPlay = hasRolled && selectedCombo !== null && phase === 'playing'
-
-  // Combo forzado por la regla Joker (el upper correspondiente si está libre)
-  const forcedCombo = jokerActive && jokerUpperId && scores[currentPlayer][jokerUpperId] === null
-    ? jokerUpperId : null
-
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white select-none flex flex-col">
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🎲</span>
-          <h1 className="text-sm font-bold tracking-wide text-amber-300">Dice Party</h1>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-white/10 px-3 py-2 flex items-center justify-between gap-2">
+        <span className="text-xl">🎲</span>
+        {modeToggle}
+        <div className="flex items-center gap-1.5">
           {phase !== 'done' && (
             <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-bold">
-              {PLAYER_NAMES[currentPlayer]} · T{gs.turn + 1}/26
+              {players[currentPlayer]} · {gs.turn + 1}/{TOTAL_TURNS * players.length}
             </span>
           )}
-          <button
-            onClick={() => setShowReset(true)}
-            className="px-2 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition"
-          >
-            🔄
-          </button>
-          <button
-            onClick={onExit}
-            className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition"
-          >
-            ✕
-          </button>
+          <button onClick={() => setShowPlayers(true)}
+            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition">👥</button>
+          <button onClick={() => setShowReset(true)}
+            className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition">🔄</button>
         </div>
       </header>
 
-      {/* ── Área de juego ── */}
+      {/* Área de juego */}
       <div className="flex-1 flex flex-col gap-3 p-3">
 
-        {/* Scorecard — primero */}
+        {/* Scorecard */}
         <Scorecard
+          players={players}
           scores={scores}
           potential={potential}
           selectedCombo={selectedCombo}
@@ -245,7 +192,7 @@ export default function DicePartyMode({ onExit }) {
 
         {/* Banner Joker */}
         {jokerActive && hasRolled && (
-          <div className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center leading-snug">
+          <div className="px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold text-center">
             🌟 ¡JOKER! +100 bonus
             {forcedCombo
               ? ` · Debes jugar: ${UPPER_COMBOS.find(c => c.id === forcedCombo)?.label}`
@@ -253,241 +200,194 @@ export default function DicePartyMode({ onExit }) {
           </div>
         )}
 
-        {/* Dados — debajo del scorecard */}
+        {/* Dados */}
         <div className="flex justify-center gap-2 py-1">
           {dice.map((val, i) => (
-            <Die
-              key={i}
-              value={val}
-              locked={locked[i]}
-              rolling={rolling}
-              onClick={() => toggleLock(i)}
-            />
+            <Die key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} />
           ))}
         </div>
 
-        {/* Botones de acción */}
+        {/* Botones */}
         <div className="flex gap-2 pb-2">
-          <button
-            onClick={handleRoll}
-            disabled={!canRoll}
-            className="flex-1 py-3 rounded-xl font-bold text-sm transition
-              bg-amber-500 hover:bg-amber-400 text-black
-              disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft} left)` : ''}
+          <button onClick={handleRoll} disabled={!canRoll}
+            className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-black transition disabled:opacity-40">
+            🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
           </button>
-          <button
-            onClick={handlePlay}
-            disabled={!canPlay}
-            className="flex-1 py-3 rounded-xl font-bold text-sm transition
-              bg-emerald-500 hover:bg-emerald-400 text-black
-              disabled:opacity-40 disabled:cursor-not-allowed"
-          >
+          <button onClick={handlePlay} disabled={!canPlay}
+            className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-40">
             ✅ JUGAR
           </button>
         </div>
       </div>
 
-      {/* ── Modal reset ── */}
+      {/* Modal reset */}
       {showReset && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setShowReset(false)}
-        >
-          <div
-            className="bg-slate-800 rounded-2xl p-6 border border-white/10 shadow-2xl max-w-xs w-full text-center"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowReset(false)}>
+          <div className="bg-slate-800 rounded-2xl p-6 border border-white/10 shadow-2xl max-w-xs w-full text-center" onClick={e => e.stopPropagation()}>
             <div className="text-4xl mb-3">🔄</div>
             <h2 className="text-white font-bold text-lg mb-2">¿Nueva partida?</h2>
             <p className="text-white/50 text-sm mb-5">Se borrarán todas las puntuaciones.</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowReset(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 font-medium">
-                Cancelar
-              </button>
-              <button onClick={handleReset} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold transition">
-                Reiniciar
-              </button>
+              <button onClick={() => setShowReset(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 font-medium">Cancelar</button>
+              <button onClick={handleReset} className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold transition">Reiniciar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal fin de partida ── */}
+      {/* Modal jugadores */}
+      {showPlayers && (
+        <PlayersModal players={players} onSave={savePlayers} onClose={() => setShowPlayers(false)} />
+      )}
+
+      {/* Modal fin de partida */}
       {phase === 'done' && !showReset && (
-        <GameOverModal totals={totals} onReset={handleReset} onExit={onExit} />
+        <GameOverModal players={players} totals={totals} onReset={handleReset} />
       )}
     </div>
   )
 }
 
-// ── Scorecard ─────────────────────────────────────────────────────────────────
+// ── Scorecard ─────────────────────────────────────────────────────────────
 //
-// Layout de dos columnas side-by-side: UPPER (izq) | LOWER (der)
-// Subcabeceras: ELLOS / TÚ por cada columna
-// Compacto para que quepa en pantalla móvil sin scroll.
+// Filas = combinaciones, columnas = jugadores (igual que el modo normal).
+// Upper y Lower son separadores sutiles, sin cabeceras dominantes.
 
 function Scorecard({
-  scores, potential, selectedCombo, forcedCombo,
+  players, scores, potential, selectedCombo, forcedCombo,
   upperSums, upperBonuses, totals, jokerBonuses,
   onSelectCombo, currentPlayer, hasRolled, phase,
 }) {
-
-  /** Clases CSS de una celda según su estado */
-  function cellClass(comboId, playerIdx) {
-    const played = scores[playerIdx][comboId] !== null
-    const isSelected  = selectedCombo === comboId && playerIdx === currentPlayer
-    const isForced    = forcedCombo   === comboId && playerIdx === currentPlayer
-    const pot         = potential?.[comboId]
-    const isAvailable = pot?.available && playerIdx === currentPlayer && hasRolled
+  function cellClass(comboId, pi) {
+    const played      = scores[pi][comboId] !== null
+    const isSelected  = selectedCombo === comboId && pi === currentPlayer
+    const isForced    = forcedCombo   === comboId && pi === currentPlayer
+    const isAvailable = potential?.[comboId]?.available && pi === currentPlayer && hasRolled
 
     if (isForced)    return 'bg-amber-500/30 border border-amber-400 text-amber-200 font-bold cursor-pointer'
     if (isSelected)  return 'bg-emerald-500/30 border border-emerald-400 text-emerald-200 font-bold cursor-pointer'
     if (played)      return 'bg-white/5 text-white/70'
     if (isAvailable) return 'bg-sky-500/15 text-sky-300 cursor-pointer active:bg-sky-500/30'
-    return 'bg-white/5 text-white/25'
+    return 'text-white/20'
   }
 
-  /** Contenido de una celda */
-  function cellContent(comboId, playerIdx) {
-    const val = scores[playerIdx][comboId]
-    if (val !== null) return <span>{val}</span>
-    if (potential && playerIdx === currentPlayer && hasRolled) {
-      const pot = potential[comboId]
-      if (pot?.available) return <span className="text-sky-300/80 text-[11px]">{pot.score}</span>
-    }
-    return <span className="text-white/20">—</span>
+  function cellContent(comboId, pi) {
+    const val = scores[pi][comboId]
+    if (val !== null) return val
+    if (potential?.[comboId]?.available && pi === currentPlayer && hasRolled)
+      return <span className="text-[11px]">{potential[comboId].score}</span>
+    return '—'
   }
 
-  function handleClick(comboId, playerIdx) {
-    if (playerIdx !== currentPlayer || !hasRolled || phase !== 'playing') return
-    const pot = potential?.[comboId]
-    if (pot?.available) onSelectCombo(comboId, true)
+  function handleClick(comboId, pi) {
+    if (pi !== currentPlayer) return
+    onSelectCombo(comboId)
   }
 
-  // Columna de celdas para un jugador dado
-  function PlayerCells({ comboId }) {
-    return [0, 1].map(pi => (
-      <div
-        key={pi}
-        onClick={() => handleClick(comboId, pi)}
-        className={`w-9 h-7 flex items-center justify-center text-xs font-bold rounded mx-px transition-colors ${cellClass(comboId, pi)}`}
-      >
-        {cellContent(comboId, pi)}
-      </div>
-    ))
-  }
+  // Ancho de columna de jugador según cuántos hay
+  const colW = players.length <= 2 ? 'w-12' : players.length <= 3 ? 'w-10' : 'w-8'
 
   return (
     <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-800/60 text-xs">
 
-      {/* ── Cabeceras de sección ── */}
-      <div className="grid grid-cols-2 divide-x divide-white/10">
-        <div className="bg-slate-700/70 text-center py-1">
-          <span className="font-bold text-amber-300 uppercase tracking-widest text-[11px]">Upper</span>
-        </div>
-        <div className="bg-slate-700/70 text-center py-1">
-          <span className="font-bold text-sky-300 uppercase tracking-widest text-[11px]">Lower</span>
-        </div>
-      </div>
-
-      {/* ── Subcabeceras ELLOS / TÚ ── */}
-      <div className="grid grid-cols-2 divide-x divide-white/10 bg-slate-700/40 border-b border-white/10">
-        {/* Upper subheader */}
-        <div className="grid grid-cols-[1fr_auto_auto] items-center">
-          <div className="py-1 pl-2 text-[10px] text-white/30 font-semibold">Combo</div>
-          <div className="w-9 text-center py-1 text-[10px] text-slate-400 font-bold">{PLAYER_NAMES[0]}</div>
-          <div className="w-9 text-center py-1 pr-1 text-[10px] text-amber-300 font-bold">{PLAYER_NAMES[1]}</div>
-        </div>
-        {/* Lower subheader */}
-        <div className="grid grid-cols-[1fr_auto_auto] items-center">
-          <div className="py-1 pl-2 text-[10px] text-white/30 font-semibold">Combo</div>
-          <div className="w-9 text-center py-1 text-[10px] text-slate-400 font-bold">{PLAYER_NAMES[0]}</div>
-          <div className="w-9 text-center py-1 pr-1 text-[10px] text-amber-300 font-bold">{PLAYER_NAMES[1]}</div>
-        </div>
-      </div>
-
-      {/* ── Filas de combinaciones (upper | lower en paralelo) ── */}
-      {/* Las 6 upper y 7 lower se alinean fila a fila; la última fila lower no tiene par */}
-      <div className="divide-y divide-white/5">
-        {Array.from({ length: Math.max(UPPER_COMBOS.length, LOWER_COMBOS.length) }).map((_, rowIdx) => {
-          const uc = UPPER_COMBOS[rowIdx]
-          const lc = LOWER_COMBOS[rowIdx]
-          return (
-            <div key={rowIdx} className="grid grid-cols-2 divide-x divide-white/10">
-              {/* Celda upper */}
-              {uc ? (
-                <div className="grid grid-cols-[1fr_auto_auto] items-center py-0.5">
-                  <div className="flex items-center gap-1 pl-1.5">
-                    <MiniDie value={uc.upperValue} />
-                    <span className="text-[11px] text-white/70 leading-none">{uc.badge}</span>
-                  </div>
-                  <PlayerCells comboId={uc.id} />
-                </div>
-              ) : (
-                <div />
-              )}
-
-              {/* Celda lower */}
-              {lc ? (
-                <div className="grid grid-cols-[1fr_auto_auto] items-center py-0.5">
-                  <div className="pl-1.5">
-                    <span className="text-[11px] text-white/70 leading-none">{lc.badge}</span>
-                    {lc.fixedScore && (
-                      <span className="text-[9px] text-white/30 ml-1">({lc.fixedScore})</span>
-                    )}
-                  </div>
-                  <PlayerCells comboId={lc.id} />
-                </div>
-              ) : (
-                <div />
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* ── Filas de bonus ── */}
-      <div className="grid grid-cols-2 divide-x divide-white/10 border-t border-white/10 bg-slate-900/30">
-        {/* Bonus upper */}
-        <div className="grid grid-cols-[1fr_auto_auto] items-center py-1">
-          <div className="pl-1.5">
-            <span className="text-[10px] text-amber-400 font-bold">Bonus +35</span>
-            <span className="text-[9px] text-white/30 block">&gt;62 pts</span>
+      {/* Cabecera: combo + un col por jugador */}
+      <div className={`grid items-center bg-slate-700/60 border-b border-white/10`}
+           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+        <div className="py-1.5 pl-2 text-[10px] text-white/30 font-semibold uppercase tracking-wider">Combinación</div>
+        {players.map((name, pi) => (
+          <div key={pi} className={`${colW} text-center py-1.5 text-[10px] font-bold truncate px-1 ${pi === currentPlayer && phase === 'playing' ? 'text-amber-300' : 'text-white/40'}`}>
+            {name.split(' ')[0]}
           </div>
-          {[0, 1].map(pi => (
-            <div key={pi} className="w-9 flex flex-col items-center">
-              <span className={`text-[11px] font-bold ${upperBonuses[pi] ? 'text-amber-300' : 'text-white/25'}`}>
-                {upperBonuses[pi] ? '+35' : '—'}
-              </span>
-              <span className="text-[9px] text-white/30">{upperSums[pi]}</span>
+        ))}
+      </div>
+
+      {/* Separador Upper */}
+      <div className="px-2 py-0.5 bg-slate-900/40 border-b border-white/5">
+        <span className="text-[9px] text-white/25 uppercase tracking-widest font-bold">Superior</span>
+      </div>
+
+      {/* Filas Upper */}
+      {UPPER_COMBOS.map((combo, ri) => (
+        <div key={combo.id}
+          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
+          style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+          <div className="flex items-center gap-1.5 pl-2 py-1">
+            <MiniDie value={combo.upperValue} />
+            <span className="text-white/70 text-[11px]">{combo.badge}</span>
+          </div>
+          {players.map((_, pi) => (
+            <div key={pi}
+              onClick={() => handleClick(combo.id, pi)}
+              className={`${colW} h-7 flex items-center justify-center text-xs font-bold rounded mx-0.5 transition-colors ${cellClass(combo.id, pi)}`}>
+              {cellContent(combo.id, pi)}
             </div>
           ))}
         </div>
+      ))}
 
-        {/* Bonus joker */}
-        <div className="grid grid-cols-[1fr_auto_auto] items-center py-1">
-          <div className="pl-1.5">
-            <span className="text-[10px] text-purple-300 font-bold">🌟 Joker</span>
-            <span className="text-[9px] text-white/30 block">×100 c/u</span>
+      {/* Fila bonus upper */}
+      <div className="grid items-center bg-slate-900/30 border-b border-white/10"
+           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+        <div className="pl-2 py-1">
+          <span className="text-[10px] text-amber-400/70 font-bold">Bonus +35 </span>
+          <span className="text-[9px] text-white/25">(&gt;62)</span>
+        </div>
+        {players.map((_, pi) => (
+          <div key={pi} className={`${colW} flex flex-col items-center py-0.5`}>
+            <span className={`text-[10px] font-bold ${upperBonuses[pi] ? 'text-amber-300' : 'text-white/20'}`}>
+              {upperBonuses[pi] ? '+35' : '—'}
+            </span>
+            <span className="text-[9px] text-white/25">{upperSums[pi]}</span>
           </div>
-          {[0, 1].map(pi => (
-            <div key={pi} className="w-9 flex items-center justify-center">
-              <span className={`text-[11px] font-bold ${jokerBonuses[pi] > 0 ? 'text-purple-300' : 'text-white/25'}`}>
-                {jokerBonuses[pi] > 0 ? `+${jokerBonuses[pi] * 100}` : '—'}
-              </span>
+        ))}
+      </div>
+
+      {/* Separador Lower */}
+      <div className="px-2 py-0.5 bg-slate-900/40 border-b border-white/5">
+        <span className="text-[9px] text-white/25 uppercase tracking-widest font-bold">Inferior</span>
+      </div>
+
+      {/* Filas Lower */}
+      {LOWER_COMBOS.map((combo, ri) => (
+        <div key={combo.id}
+          className={`grid items-center border-b border-white/5 ${ri % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
+          style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+          <div className="pl-2 py-1 flex items-center gap-1">
+            <span className="text-white/70 text-[11px]">{combo.badge}</span>
+            {combo.fixedScore && <span className="text-[9px] text-white/25">({combo.fixedScore})</span>}
+          </div>
+          {players.map((_, pi) => (
+            <div key={pi}
+              onClick={() => handleClick(combo.id, pi)}
+              className={`${colW} h-7 flex items-center justify-center text-xs font-bold rounded mx-0.5 transition-colors ${cellClass(combo.id, pi)}`}>
+              {cellContent(combo.id, pi)}
             </div>
           ))}
         </div>
+      ))}
+
+      {/* Fila bonus Joker */}
+      <div className="grid items-center bg-slate-900/30 border-b border-white/10"
+           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+        <div className="pl-2 py-1">
+          <span className="text-[10px] text-purple-300/70 font-bold">🌟 Joker ×100</span>
+        </div>
+        {players.map((_, pi) => (
+          <div key={pi} className={`${colW} flex items-center justify-center py-1`}>
+            <span className={`text-[10px] font-bold ${jokerBonuses[pi] > 0 ? 'text-purple-300' : 'text-white/20'}`}>
+              {jokerBonuses[pi] > 0 ? `+${jokerBonuses[pi] * 100}` : '—'}
+            </span>
+          </div>
+        ))}
       </div>
 
-      {/* ── Totales ── */}
-      <div className="grid grid-cols-2 border-t-2 border-amber-400/30 bg-slate-900/50">
-        {[0, 1].map(pi => (
-          <div key={pi} className={`flex flex-col items-center py-2 ${pi === 0 ? 'border-r border-white/10' : ''}`}>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">{PLAYER_NAMES[pi]}</span>
-            <span className={`text-2xl font-black tabular-nums ${totals[pi] > 0 ? 'text-amber-300' : 'text-white/25'}`}>
+      {/* Totales */}
+      <div className="grid border-t-2 border-amber-400/30 bg-slate-900/50"
+           style={{ gridTemplateColumns: `1fr ${players.map(() => 'auto').join(' ')}` }}>
+        <div className="pl-2 py-2 text-[10px] text-white/30 font-bold uppercase tracking-wider self-center">Total</div>
+        {players.map((name, pi) => (
+          <div key={pi} className={`${colW} flex flex-col items-center py-1.5 ${pi < players.length - 1 ? '' : ''}`}>
+            <span className={`text-lg font-black tabular-nums ${totals[pi] > 0 ? 'text-amber-300' : 'text-white/25'}`}>
               {totals[pi] || '—'}
             </span>
           </div>
@@ -497,58 +397,55 @@ function Scorecard({
   )
 }
 
-// ── Mini dado para scorecard ──────────────────────────────────────────────────
+// ── Mini dado ─────────────────────────────────────────────────────────────
 
 const MINI_PIPS = {
-  1: [[8, 8]],
-  2: [[5, 5], [11, 11]],
-  3: [[5, 5], [8, 8], [11, 11]],
-  4: [[5, 5], [11, 5], [5, 11], [11, 11]],
-  5: [[5, 5], [11, 5], [8, 8], [5, 11], [11, 11]],
-  6: [[5, 4], [11, 4], [5, 8], [11, 8], [5, 12], [11, 12]],
+  1: [[8,8]],
+  2: [[5,5],[11,11]],
+  3: [[5,5],[8,8],[11,11]],
+  4: [[5,5],[11,5],[5,11],[11,11]],
+  5: [[5,5],[11,5],[8,8],[5,11],[11,11]],
+  6: [[5,4],[11,4],[5,8],[11,8],[5,12],[11,12]],
 }
 
 function MiniDie({ value }) {
-  const pips = MINI_PIPS[value] || []
   return (
-    <svg viewBox="0 0 16 16" width="16" height="16" style={{ flexShrink: 0 }}>
-      <rect x="1" y="1" width="14" height="14" rx="3" fill="#1e293b" stroke="#f59e0b" strokeWidth="1.5" />
-      {pips.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r="1.4" fill="#f59e0b" />
+    <svg viewBox="0 0 16 16" width="14" height="14" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="14" height="14" rx="3" fill="#1e293b" stroke="#f59e0b" strokeWidth="1.5"/>
+      {(MINI_PIPS[value] || []).map(([cx,cy],i) => (
+        <circle key={i} cx={cx} cy={cy} r="1.4" fill="#f59e0b"/>
       ))}
     </svg>
   )
 }
 
-// ── Modal fin de partida ──────────────────────────────────────────────────────
+// ── Modal fin de partida ──────────────────────────────────────────────────
 
-function GameOverModal({ totals, onReset, onExit }) {
-  const winner = totals[0] > totals[1] ? 0 : totals[1] > totals[0] ? 1 : -1
+function GameOverModal({ players, totals, onReset }) {
+  const maxScore = Math.max(...totals)
+  const winners  = players.filter((_, i) => totals[i] === maxScore)
+  const tie      = winners.length > 1
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-slate-800 rounded-2xl p-6 border border-amber-400/30 shadow-2xl max-w-xs w-full text-center">
-        <div className="text-5xl mb-3">{winner === -1 ? '🤝' : '🏆'}</div>
+        <div className="text-5xl mb-3">{tie ? '🤝' : '🏆'}</div>
         <h2 className="text-amber-300 font-black text-xl mb-1">
-          {winner === -1 ? '¡Empate!' : `¡Gana ${PLAYER_NAMES[winner]}!`}
+          {tie ? '¡Empate!' : `¡Gana ${winners[0]}!`}
         </h2>
-        <div className="flex justify-center gap-6 my-4">
-          {[0, 1].map(pi => (
+        <div className="flex justify-center gap-4 my-4 flex-wrap">
+          {players.map((name, pi) => (
             <div key={pi} className="flex flex-col items-center">
-              <span className="text-white/50 text-xs">{PLAYER_NAMES[pi]}</span>
-              <span className={`text-3xl font-black ${winner === pi ? 'text-amber-300' : 'text-white/60'}`}>
+              <span className="text-white/50 text-xs">{name}</span>
+              <span className={`text-3xl font-black ${totals[pi] === maxScore ? 'text-amber-300' : 'text-white/50'}`}>
                 {totals[pi]}
               </span>
             </div>
           ))}
         </div>
-        <div className="flex gap-3 mt-4">
-          <button onClick={onExit} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/60 font-medium text-sm">
-            Salir
-          </button>
-          <button onClick={onReset} className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition">
-            Nueva partida
-          </button>
-        </div>
+        <button onClick={onReset} className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition">
+          Nueva partida
+        </button>
       </div>
     </div>
   )
