@@ -12,14 +12,18 @@ const PIP_POSITIONS = {
   6: [[18, 15], [42, 15], [18, 30], [42, 30], [18, 45], [42, 45]],
 }
 
-// Color de cada dado por índice (0–4)
+// Color de cada dado por índice (0–5): rojo, amarillo, azul, verde, morado, celeste
 const DIE_COLORS = [
-  { bg: '#1e3a5f', border: '#3b82f6', pip: '#93c5fd', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // azul
-  { bg: '#3b1f1f', border: '#ef4444', pip: '#fca5a5', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // rojo
-  { bg: '#1a3320', border: '#22c55e', pip: '#86efac', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // verde
-  { bg: '#2d1f3d', border: '#a855f7', pip: '#d8b4fe', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // morado
-  { bg: '#2d2010', border: '#f97316', pip: '#fdba74', locked: '#1e1a0e', lockedBorder: '#f59e0b', lockedPip: '#fcd34d' }, // naranja
+  { bg: '#3b1212', border: '#ef4444', pip: '#fca5a5' }, // 0 → rojo
+  { bg: '#2e2500', border: '#eab308', pip: '#fde047' }, // 1 → amarillo
+  { bg: '#1e3a5f', border: '#3b82f6', pip: '#93c5fd' }, // 2 → azul
+  { bg: '#1a3320', border: '#22c55e', pip: '#86efac' }, // 3 → verde
+  { bg: '#2d1f3d', border: '#a855f7', pip: '#d8b4fe' }, // 4 → morado
+  { bg: '#0e2e38', border: '#06b6d4', pip: '#67e8f9' }, // 5 → celeste
 ]
+
+// Cuando está bloqueado todos se vuelven dorados
+const LOCKED = { bg: '#1e1a0e', border: '#f59e0b', pip: '#fcd34d' }
 
 export default function Die({ value, locked, rolling, onClick, className = '', size = 64, index = 0 }) {
   const [animKey, setAnimKey] = useState(0)
@@ -30,10 +34,8 @@ export default function Die({ value, locked, rolling, onClick, className = '', s
   }, [rolling, locked])
 
   const pips   = value >= 1 && value <= 6 ? PIP_POSITIONS[value] : []
-  const colors = DIE_COLORS[index % DIE_COLORS.length]
-  const bg     = locked ? colors.locked       : colors.bg
-  const border = locked ? colors.lockedBorder : colors.border
-  const pip    = locked ? colors.lockedPip    : colors.pip
+  const colors = locked ? LOCKED : DIE_COLORS[index % DIE_COLORS.length]
+  const { bg, border, pip } = colors
 
   return (
     <button
@@ -50,9 +52,7 @@ export default function Die({ value, locked, rolling, onClick, className = '', s
         className={rolling && !locked ? 'die-spinning' : ''}
         style={{
           display: 'block',
-          filter: locked
-            ? `drop-shadow(0 0 8px ${colors.lockedBorder}99)`
-            : `drop-shadow(0 0 5px ${colors.border}66)`,
+          filter: `drop-shadow(0 0 ${locked ? 8 : 5}px ${border}${locked ? '99' : '66'})`,
           transition: 'filter 0.2s',
         }}
       >
