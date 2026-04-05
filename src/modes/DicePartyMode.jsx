@@ -45,11 +45,15 @@ function loadDPState() {
     const r = localStorage.getItem(STORAGE_KEY)
     if (!r) return null
     const parsed = JSON.parse(r)
-    // Validar que la estructura es compatible (tiene el campo players como array)
-    if (!parsed?.players || !Array.isArray(parsed.players)) return null
-    if (!Array.isArray(parsed.scores)) return null
+    // Validación estricta de estructura
+    if (!Array.isArray(parsed?.players) || parsed.players.length === 0) return null
+    if (!Array.isArray(parsed?.scores)) return null
+    if (typeof parsed?.turn !== 'number') return null
     return parsed
-  } catch { return null }
+  } catch {
+    try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    return null
+  }
 }
 function saveDPState(s) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) } catch {}
