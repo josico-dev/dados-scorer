@@ -14,11 +14,11 @@ export default function DadosMode({
 }) {
   return (
     <>
-      {/* Tabla — ocupa todo el espacio disponible, scroll solo horizontal */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      {/* Scroll solo horizontal, la tabla ocupa su tamaño natural */}
+      <div className="flex-1 overflow-x-auto overflow-y-auto">
         <table
-          className="border-separate border-spacing-0 h-full"
-          style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px`, width: '100%' }}
+          className="border-separate border-spacing-0 w-full"
+          style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px` }}
         >
           <thead>
             <tr>
@@ -49,10 +49,9 @@ export default function DadosMode({
           <tbody>
             {ROWS.map((row, rowIndex) => (
               <tr key={row.id} className={rowIndex % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
-                <td className={`sticky left-0 z-10 px-1 py-1 whitespace-nowrap ${rowIndex % 2 === 0 ? 'bg-slate-800' : 'bg-slate-900'}`}>
-                  <div className="flex flex-col items-center gap-0">
-                    {/* Icono más pequeño para caber */}
-                    <div className="scale-75 origin-center">{DICE_ICONS[row.id]}</div>
+                <td className={`sticky left-0 z-10 px-1 py-0.5 whitespace-nowrap ${rowIndex % 2 === 0 ? 'bg-slate-800' : 'bg-slate-900'}`}>
+                  <div className="flex flex-col items-center">
+                    <div className="scale-[0.65] origin-center -my-1">{DICE_ICONS[row.id]}</div>
                     <span className="text-[9px] text-white/40">({row.value})</span>
                   </div>
                 </td>
@@ -78,7 +77,7 @@ export default function DadosMode({
                 const total = playerTotal(scores, pi)
                 return (
                   <td key={pi} colSpan={2} className="text-center px-1 py-2 bg-slate-800">
-                    <span className={`text-lg font-black tabular-nums ${total > 0 ? 'text-amber-300' : 'text-white/40'}`}>
+                    <span className={`text-base font-black tabular-nums ${total > 0 ? 'text-amber-300' : 'text-white/40'}`}>
                       {total || '—'}
                     </span>
                   </td>

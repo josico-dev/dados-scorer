@@ -178,11 +178,11 @@ export default function DicePartyMode({ modeToggle }) {
         </div>
       </header>
 
-      {/* Área de juego */}
-      <div className="flex-1 flex flex-col gap-2 p-3 overflow-hidden">
+      {/* Área de juego — min-h-0 necesario para que flex-1 hijo funcione */}
+      <div className="flex-1 min-h-0 flex flex-col gap-2 p-3">
 
-        {/* Scorecard — crece y tiene scroll propio si hace falta */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Scorecard — ocupa el espacio disponible con scroll interno */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <Scorecard
           players={players}
           scores={scores}

@@ -105,20 +105,21 @@ export default function App() {
         </div>
       </header>
 
-      <DadosMode
-        players={players}
-        scores={scores}
-        showPlayersModal={showPlayersModal}
-        showResetModal={showResetModal}
-        onUpdateScore={updateScore}
-        onClosePlayers={() => setShowPlayersModal(false)}
-        onCloseReset={() => setShowResetModal(false)}
-        onSavePlayers={savePlayers}
-        onResetScores={resetScores}
-      />
-
-      {/* Lanzador de dados — fijo al final, debajo de la tabla */}
-      {showDiceRoller && <div className="shrink-0"><DiceRoller /></div>}
+      {/* Contenedor que limita la altura — min-h-0 es clave para flex-1 anidado */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <DadosMode
+          players={players}
+          scores={scores}
+          showPlayersModal={showPlayersModal}
+          showResetModal={showResetModal}
+          onUpdateScore={updateScore}
+          onClosePlayers={() => setShowPlayersModal(false)}
+          onCloseReset={() => setShowResetModal(false)}
+          onSavePlayers={savePlayers}
+          onResetScores={resetScores}
+        />
+        {showDiceRoller && <div className="shrink-0"><DiceRoller /></div>}
+      </div>
     </div>
   )
 }
