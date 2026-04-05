@@ -118,7 +118,7 @@ export default function App() {
           onSavePlayers={savePlayers}
           onResetScores={resetScores}
         />
-        {showDiceRoller && <div className="shrink-0"><DiceRoller /></div>}
+        {showDiceRoller && <div className="shrink-0 safe-bottom"><DiceRoller /></div>}
       </div>
     </div>
   )

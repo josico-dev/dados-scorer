@@ -201,7 +201,7 @@ export default function DicePartyMode({ modeToggle }) {
         </div>
 
         {/* Zona inferior fija: joker + dados + botones */}
-        <div className="shrink-0 flex flex-col gap-2">
+        <div className="shrink-0 flex flex-col gap-2 safe-bottom">
 
           {/* Banner Joker */}
           {jokerActive && hasRolled && (

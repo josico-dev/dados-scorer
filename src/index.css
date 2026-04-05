@@ -6,8 +6,12 @@
     -webkit-tap-highlight-color: transparent;
   }
   body, #root {
-    height: 100dvh; /* dvh = dynamic viewport height, descuenta la barra de Chrome en móvil */
+    height: 100dvh;
     overflow: hidden;
+  }
+  /* Espacio extra para la barra del sistema (home indicator Android/iOS) */
+  .safe-bottom {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
   .app-shell {
     height: 100dvh;
