@@ -40,12 +40,17 @@ function rollDice(dice, locked) {
   return dice.map((d, i) => locked[i] ? d : Math.ceil(Math.random() * 6))
 }
 
+const DP_STORAGE_VERSION = 3
+
 function loadDPState() {
   try {
     const r = localStorage.getItem(STORAGE_KEY)
     if (!r) return null
     const parsed = JSON.parse(r)
-    // Validación estricta de estructura
+    if (parsed?._v !== DP_STORAGE_VERSION) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
     if (!Array.isArray(parsed?.players) || parsed.players.length === 0) return null
     if (!Array.isArray(parsed?.scores)) return null
     if (typeof parsed?.turn !== 'number') return null
@@ -56,7 +61,7 @@ function loadDPState() {
   }
 }
 function saveDPState(s) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)) } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...s, _v: DP_STORAGE_VERSION })) } catch {}
 }
 
 const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
