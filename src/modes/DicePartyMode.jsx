@@ -81,64 +81,82 @@ export default function DicePartyMode({
   const [showReset, setShowReset] = useState(false)
   const [showPlayers, setShowPlayers] = useState(false)
 
+  // Ref para acceder al estado actual sin stale closure
+  const gsRef = useRef(gs)
+  useEffect(() => { gsRef.current = gs }, [gs])
+  const myTurnRef = useRef(true)
+
+  // Calcular si es mi turno — actualizar ref
+  const isMyTurnOnline = !isOnline || myPlayerIndex === null || myPlayerIndex === gs.currentPlayer
+  useEffect(() => { myTurnRef.current = isMyTurnOnline }, [isMyTurnOnline])
+
   // Guardar en localStorage
   useEffect(() => { saveDPState(gs) }, [gs])
 
-  // Cuando llega estado online del host, aplicarlo localmente
+  // Cuando llega estado online, aplicar COMPLETO (incluyendo jugadores, scores, turno)
   useEffect(() => {
     if (!isOnline || !onlineDpState) return
-    setGs(prev => ({ ...onlineDpState, dice: prev.dice, locked: prev.locked, rolling: prev.rolling }))
+    setGs(prev => ({
+      ...prev,
+      ...onlineDpState,
+      // No sobreescribir los dados locales del jugador activo
+      dice:   myTurnRef.current ? prev.dice   : onlineDpState.dice   ?? prev.dice,
+      locked: myTurnRef.current ? prev.locked : onlineDpState.locked ?? prev.locked,
+    }))
   }, [JSON.stringify(onlineDpState)])
 
-  // Función para actualizar estado y notificar a App (que lo sincroniza al otro)
-  function updateGs(updater) {
+  // Sincronizar players de App → gs cuando estamos online
+  // (para que los nombres se reflejen en el scorecard)
+  const [onlinePlayers, setOnlinePlayers] = useState(null)
+  // (Recibimos onlineDpState que incluye players desde App)
+
+  // Función para actualizar gs y notificar a App
+  const updateGs = useCallback((updater) => {
     setGs(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater
-      if (isOnline && onDpStateChange) {
-        // Enviar versión sin los dados en vuelo (se sincronizan por diceUpdate)
-        onDpStateChange({ ...next, dice: prev.dice, locked: prev.locked })
+      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }
+      if (onDpStateChange) {
+        onDpStateChange(next)
       }
       return next
     })
-  }
+  }, [onDpStateChange])
 
-  // Sincronizar dados al lanzar — usa el callback estable de App
+  // Sincronizar dados al lanzar (el que lanza notifica al otro)
   useEffect(() => {
     if (isOnline && gs.hasRolled && onDiceRoll) {
       onDiceRoll(gs.dice, gs.locked, gs.rollsLeft)
     }
   }, [gs.dice, gs.locked, gs.rollsLeft])
 
-
-  // ── Acciones de turno ─────────────────────────────────────────────────
-
-  const isMyTurnOnline = !mp?.isConnected || myPlayerIndex === null || myPlayerIndex === gs.currentPlayer
+  // ── Acciones ──────────────────────────────────────────────────────────
 
   const handleRoll = useCallback(() => {
-    if (rolling || gs.rollsLeft <= 0 || gs.phase !== 'playing') return
-    // Online: solo puedes lanzar en tu turno
-    if (!isMyTurnOnline) return
+    const g = gsRef.current
+    if (rolling || g.rollsLeft <= 0 || g.phase !== 'playing') return
+    if (!myTurnRef.current) return  // no es tu turno
     setRolling(true)
     setTimeout(() => {
       setGs(prev => {
         const newDice = rollDice(prev.dice, prev.locked)
         const { jokerActive, jokerUpperId } = detectJoker(newDice, prev.scores[prev.currentPlayer])
-        return { ...prev, dice: newDice, rollsLeft: prev.rollsLeft - 1, hasRolled: true, jokerActive, jokerUpperId, selectedCombo: null }
+        const next = { ...prev, dice: newDice, rollsLeft: prev.rollsLeft - 1, hasRolled: true, jokerActive, jokerUpperId, selectedCombo: null }
+        // Notificar dados al otro jugador inmediatamente
+        if (onDiceRoll) onDiceRoll(newDice, prev.locked, prev.rollsLeft - 1)
+        return next
       })
       setRolling(false)
     }, 280)
-  }, [rolling, gs.rollsLeft, gs.phase])
+  }, [rolling, onDiceRoll])
 
   function toggleLock(i) {
-    if (!gs.hasRolled || gs.phase !== 'playing') return
+    if (!gsRef.current.hasRolled || gsRef.current.phase !== 'playing' || !myTurnRef.current) return
     setGs(prev => { const l = [...prev.locked]; l[i] = !l[i]; return { ...prev, locked: l } })
   }
 
   function selectCombo(comboId) {
-    if (!gs.hasRolled || gs.phase !== 'playing') return
-    // Online: solo puedes seleccionar en tu turno
-    if (mp?.isConnected && myPlayerIndex !== null && myPlayerIndex !== gs.currentPlayer) return
-    const pot = calcPotential(gs.dice, gs.scores[gs.currentPlayer], gs.jokerActive, gs.jokerUpperId)
+    const g = gsRef.current
+    if (!g.hasRolled || g.phase !== 'playing' || !myTurnRef.current) return
+    const pot = calcPotential(g.dice, g.scores[g.currentPlayer], g.jokerActive, g.jokerUpperId)
     if (!pot[comboId]?.available) return
     setGs(prev => ({ ...prev, selectedCombo: prev.selectedCombo === comboId ? null : comboId }))
   }
@@ -174,6 +192,8 @@ export default function DicePartyMode({
     }
 
     updateGs(prev => ({ ...prev, ...newState }))
+    // En online, notificar también el avance de turno al sistema de App
+    if (isOnline) onAdvanceTurn?.()
   }
 
   function handleReset() {

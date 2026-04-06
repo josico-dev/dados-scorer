@@ -72,10 +72,14 @@ export default function App() {
         return
       }
       if (action.action === 'registerName') {
-        // Guest anuncia su nombre → host actualiza players[1] y re-emite
         setPlayers(prev => {
           const next = [...prev]
           next[action.index] = action.name
+          // Re-emitir dpGameState con players actualizados
+          if (stateRef.current.dpGameState) {
+            const updatedDp = { ...stateRef.current.dpGameState, players: next }
+            setDpGameState(updatedDp)
+          }
           return next
         })
         return
@@ -153,15 +157,17 @@ export default function App() {
 
   // Callback para DiceParty: sincroniza estado de partida
   const onDpStateChange = useCallback((newState) => {
-    setDpGameState(newState)
-    if (mp.isConnected) {
-      if (mp.isHost) {
-        mp.sendState({ ...stateRef.current, dpGameState: newState })
+    // Siempre incluir los players actuales en el estado de DiceParty
+    const stateWithPlayers = { ...newState, players: stateRef.current.players }
+    setDpGameState(stateWithPlayers)
+    if (mpRef.current?.isConnected) {
+      if (mpRef.current.isHost) {
+        mpRef.current.sendState({ ...stateRef.current, dpGameState: stateWithPlayers })
       } else {
-        mp.sendAction({ action: 'dpStateUpdate', state: newState })
+        mpRef.current.sendAction({ action: 'dpStateUpdate', state: stateWithPlayers })
       }
     }
-  }, [mp.isConnected, mp.isHost])
+  }, [])
 
   // Callback para DiceParty: sincronizar dados en vuelo
   const onDiceRoll = useCallback((dice, locked, rollsLeft) => {
