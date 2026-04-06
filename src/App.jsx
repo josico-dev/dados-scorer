@@ -1,6 +1,6 @@
 // ─── App principal ─────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { DEFAULT_PLAYERS, ROWS } from './config'
 import { loadState, saveState } from './storage'
 import { emptyScores } from './helpers'
@@ -18,11 +18,10 @@ const saveMode = m => { try { localStorage.setItem(MODE_KEY, m) } catch {} }
 export default function App() {
   const [mode,      setMode]      = useState(() => loadMode())
   const [themeName, setThemeName] = useState(() => loadTheme())
-
   const theme  = THEMES[themeName] ?? THEMES.dark
   const isDark = themeName === 'dark'
 
-  // ── Estado modo Dados ────────────────────────────────────────────────────
+  // ── Estado del juego ─────────────────────────────────────────────────────
   const saved = loadState()
   const [players, setPlayers] = useState(saved?.players ?? DEFAULT_PLAYERS)
   const [scores,  setScores]  = useState(saved?.scores  ?? emptyScores(DEFAULT_PLAYERS))
@@ -36,97 +35,103 @@ export default function App() {
   const [rollerReset,      setRollerReset]      = useState(0)
   const [diceSelected,     setDiceSelected]     = useState(null)
   const [myPlayerIndex,    setMyPlayerIndex]    = useState(0)
-  // Dados remotos del oponente (para modo espectador en Dice Party)
-  const [remoteDice,     setRemoteDice]     = useState(null)
-  // Estado de Dice Party elevado a App para sincronización online
-  const [dpGameState,    setDpGameState]    = useState(null)   // null = usa estado interno de DicePartyMode
-  const dpStateRef = useRef(null)
-  useEffect(() => { dpStateRef.current = dpGameState }, [dpGameState])
+  const [remoteDice,       setRemoteDice]       = useState(null)
+  const [dpGameState,      setDpGameState]      = useState(null)
 
-  // Refs para callbacks sin stale closure
-  const playersRef = useRef(players)
-  const scoresRef  = useRef(scores)
-  const cpRef      = useRef(currentPlayer)
-  useEffect(() => { playersRef.current = players },       [players])
-  useEffect(() => { scoresRef.current  = scores },        [scores])
-  useEffect(() => { cpRef.current      = currentPlayer }, [currentPlayer])
-
-  // ── Multiplayer ──────────────────────────────────────────────────────────
-  const mp = useMultiplayer({
-    onRemoteAction: (action) => {
-      // diceUpdate lo procesa cualquiera (espectador de dados)
-      if (action.action === 'diceUpdate') {
-        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
-        return
-      }
-      // El resto solo lo procesa el host
-      if (!mpRef.current.isHost) return
-
-      if (action.action === 'requestState') {
-        mpRef.current.sendState({
-          players: playersRef.current,
-          scores:  scoresRef.current,
-          currentPlayer: cpRef.current,
-          mode,
-          assignedPlayerIndex: 1,
-          dpGameState: dpStateRef.current,
-        })
-        return
-      }
-      if (action.action === 'dpStateUpdate') {
-        // Guest envía su estado de Dice Party al host para sincronizar
-        setDpGameState(action.state)
-        return
-      }
-      if (action.action === 'updateScore') {
-        setScores(prev => ({
-          ...prev,
-          [action.pi]: {
-            ...prev[action.pi],
-            [action.rowId]: { ...prev[action.pi]?.[action.rowId], [action.subId]: action.value },
-          },
-        }))
-      }
-      if (action.action === 'nextPlayer') {
-        setCurrentPlayer(prev => (prev + 1) % playersRef.current.length)
-        setRemoteDice(null)
-      }
-      if (action.action === 'reset') {
-        setScores(emptyScores(playersRef.current))
-      }
-    },
-    onRemoteState: (state) => {
-      // Solo aplicar players si el array tiene más de 1 elemento O si realmente mejora lo que tenemos
-      if (Array.isArray(state.players) && state.players.length >= 1) setPlayers(state.players)
-      if (state.scores        !== undefined) setScores(state.scores)
-      if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
-      if (state.mode          !== undefined) setMode(state.mode)
-      if (state.assignedPlayerIndex !== undefined) setMyPlayerIndex(state.assignedPlayerIndex)
-      if (state.dpGameState   !== undefined) setDpGameState(state.dpGameState)
-    },
-  })
-
-  const mpRef = useRef(mp)
-  useEffect(() => { mpRef.current = mp }, [mp])
-
-  useEffect(() => {
-    if (mp.isConnected) setMyPlayerIndex(mp.isHost ? 0 : 1)
-  }, [mp.isConnected, mp.isHost])
-
-  // Host emite estado completo en cada cambio
-  useEffect(() => {
-    if (mpRef.current.isConnected && mpRef.current.isHost) {
-      mpRef.current.sendState({ players, scores, currentPlayer, mode, dpGameState })
-    }
-  }, [players, scores, currentPlayer, mode, dpGameState])
+  // Refs — siempre actuales dentro de callbacks
+  const stateRef = useRef({})
+  stateRef.current = { players, scores, currentPlayer, mode, dpGameState }
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
   useEffect(() => { saveTheme(themeName); document.body.style.background = theme.bodyBg }, [themeName])
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Multiplayer ──────────────────────────────────────────────────────────
+  const mpRef = useRef(null)
 
-  function updateScore(pi, rowId, sub, val) {
+  const mp = useMultiplayer({
+    onRemoteAction: useCallback((action) => {
+      // diceUpdate lo recibe cualquiera
+      if (action.action === 'diceUpdate') {
+        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
+        return
+      }
+      // El resto solo lo procesa el host
+      if (!mpRef.current?.isHost) return
+
+      if (action.action === 'requestState') {
+        const s = stateRef.current
+        mpRef.current.sendState({
+          players: s.players,
+          scores:  s.scores,
+          currentPlayer: s.currentPlayer,
+          mode: s.mode,
+          dpGameState: s.dpGameState,
+          assignedPlayerIndex: 1,
+        })
+        return
+      }
+      if (action.action === 'registerName') {
+        // Guest anuncia su nombre → host actualiza players[1] y re-emite
+        setPlayers(prev => {
+          const next = [...prev]
+          next[action.index] = action.name
+          return next
+        })
+        return
+      }
+      if (action.action === 'updateScore') {
+        setScores(prev => ({
+          ...prev,
+          [action.pi]: { ...prev[action.pi],
+            [action.rowId]: { ...prev[action.pi]?.[action.rowId], [action.subId]: action.value }
+          },
+        }))
+      }
+      if (action.action === 'nextPlayer') {
+        setCurrentPlayer(prev => (prev + 1) % stateRef.current.players.length)
+        setRemoteDice(null)
+      }
+      if (action.action === 'reset') {
+        setScores(emptyScores(stateRef.current.players))
+      }
+      if (action.action === 'dpStateUpdate') {
+        setDpGameState(action.state)
+      }
+    }, []),
+
+    onRemoteState: useCallback((state) => {
+      if (Array.isArray(state.players))          setPlayers(state.players)
+      if (state.scores        != null)           setScores(state.scores)
+      if (state.currentPlayer != null)           setCurrentPlayer(state.currentPlayer)
+      if (state.mode          != null)           setMode(state.mode)
+      if (state.assignedPlayerIndex != null)     setMyPlayerIndex(state.assignedPlayerIndex)
+      if (state.dpGameState   !== undefined)     setDpGameState(state.dpGameState)
+    }, []),
+  })
+
+  // Guardar ref siempre actualizada
+  useEffect(() => { mpRef.current = mp }, [mp])
+
+  // Host emite estado completo cuando algo cambia
+  useEffect(() => {
+    if (mp.isConnected && mp.isHost) {
+      mp.sendState({
+        players, scores, currentPlayer, mode, dpGameState,
+      })
+    }
+  }, [players, scores, currentPlayer, mode, dpGameState])
+
+  // Al conectarse: asignar índice y anunciar nombre al otro
+  useEffect(() => {
+    if (!mp.isConnected) return
+    const idx = mp.isHost ? 0 : 1
+    setMyPlayerIndex(idx)
+  }, [mp.isConnected, mp.isHost])
+
+  // ── Helpers de juego ─────────────────────────────────────────────────────
+
+  const updateScore = useCallback((pi, rowId, sub, val) => {
     if (mp.isConnected && !mp.isHost) {
       mp.sendAction({ action: 'updateScore', pi, rowId, subId: sub, value: val })
       return
@@ -135,16 +140,35 @@ export default function App() {
       ...prev,
       [pi]: { ...prev[pi], [rowId]: { ...prev[pi][rowId], [sub]: val } },
     }))
-  }
+  }, [mp.isConnected, mp.isHost])
 
-  function advanceTurn() {
+  const advanceTurn = useCallback(() => {
     if (mp.isConnected && !mp.isHost) {
       mp.sendAction({ action: 'nextPlayer' })
     } else {
-      setCurrentPlayer(prev => (prev + 1) % players.length)
+      setCurrentPlayer(prev => (prev + 1) % stateRef.current.players.length)
       setRemoteDice(null)
     }
-  }
+  }, [mp.isConnected, mp.isHost])
+
+  // Callback para DiceParty: sincroniza estado de partida
+  const onDpStateChange = useCallback((newState) => {
+    setDpGameState(newState)
+    if (mp.isConnected) {
+      if (mp.isHost) {
+        mp.sendState({ ...stateRef.current, dpGameState: newState })
+      } else {
+        mp.sendAction({ action: 'dpStateUpdate', state: newState })
+      }
+    }
+  }, [mp.isConnected, mp.isHost])
+
+  // Callback para DiceParty: sincronizar dados en vuelo
+  const onDiceRoll = useCallback((dice, locked, rollsLeft) => {
+    if (mp.isConnected) {
+      mp.sendAction({ action: 'diceUpdate', dice, locked, rollsLeft })
+    }
+  }, [mp.isConnected])
 
   function savePlayers(names) {
     setPlayers(names)
@@ -165,8 +189,7 @@ export default function App() {
 
   function toggleTheme() { setThemeName(t => t === 'dark' ? 'light' : 'dark') }
 
-  // ── Shared header components ──────────────────────────────────────────────
-
+  // ── ModeToggle ────────────────────────────────────────────────────────────
   function ModeToggle() {
     return (
       <div className="flex rounded-2xl p-1 gap-1"
@@ -200,39 +223,20 @@ export default function App() {
           myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
           remoteDice={remoteDice}
           onOpenMultiplayer={() => setShowMultiplayer(true)}
-          // Cuando Dice Party cambia el turno, lo sube al App para sincronizar
           onAdvanceTurn={advanceTurn}
-          // Estado online de Dice Party (sincronizado entre host y guest)
           onlineDpState={mp.isConnected ? dpGameState : null}
-          onDpStateChange={mp.isConnected ? (newState) => {
-            setDpGameState(newState)
-            // El host también lo emite al guest inmediatamente
-            if (mpRef.current.isHost) {
-              mpRef.current.sendState({ players, scores, currentPlayer, mode, dpGameState: newState })
-            } else {
-              // El guest lo envía al host
-              mpRef.current.sendAction({ action: 'dpStateUpdate', state: newState })
-            }
-          } : null}
+          onDpStateChange={mp.isConnected ? onDpStateChange : null}
+          onDiceRoll={onDiceRoll}
         />
         {showMultiplayer && (
-          <MultiplayerModal
-            mp={mp}
-            isDark={isDark}
-            players={players}
-            onConfirmPlayer={(index, name, minCount) => {
+          <MultiplayerModal mp={mp} isDark={isDark} players={players}
+            onConfirmPlayer={(index, name) => {
               setMyPlayerIndex(index)
-              const base = players.length >= (minCount ?? 2) ? [...players] : [...DEFAULT_PLAYERS]
+              const base = players.length >= 2 ? [...players] : [...DEFAULT_PLAYERS]
               base[index] = name
               setPlayers(base)
-              // Asegurar que scores tenga entradas para todos los jugadores
-              setScores(prev => {
-                const next = emptyScores(base)
-                base.forEach((_, i) => {
-                  if (prev[i]) ROWS.forEach(r => { next[i][r.id] = prev[i][r.id] ?? {} })
-                })
-                return next
-              })
+              // Anunciar nombre al otro jugador
+              if (mp.isConnected) mp.sendAction({ action: 'registerName', index, name })
             }}
             onClose={() => setShowMultiplayer(false)}
           />
@@ -253,7 +257,7 @@ export default function App() {
         </div>
         <div className="flex items-center justify-between gap-1">
           {[
-            { label: '🎲', title: 'Dados',     active: showDiceRoller,  onClick: () => setShowDiceRoller(v => !v), activeColor: '#f59e0b' },
+            { label: '🎲', title: 'Dados',     active: showDiceRoller,    onClick: () => setShowDiceRoller(v => !v), activeColor: '#f59e0b' },
             { label: mp.isConnected ? '🌐 ●' : '🌐', title: 'Online', active: mp.isConnected, onClick: () => setShowMultiplayer(true), activeColor: '#22c55e' },
             { label: '👥', title: 'Jugadores', active: false, onClick: () => setShowPlayersModal(true) },
             { label: '🔄', title: 'Reset',     active: false, onClick: () => setShowResetModal(true), danger: true },
@@ -276,17 +280,13 @@ export default function App() {
 
       <div className="flex-1 min-h-0 flex flex-col">
         <DadosMode
-          theme={theme}
-          isDark={isDark}
-          players={players}
-          scores={scores}
-          showPlayersModal={showPlayersModal}
-          showResetModal={showResetModal}
+          theme={theme} isDark={isDark}
+          players={players} scores={scores}
+          showPlayersModal={showPlayersModal} showResetModal={showResetModal}
           onUpdateScore={updateScore}
           onClosePlayers={() => setShowPlayersModal(false)}
           onCloseReset={() => setShowResetModal(false)}
-          onSavePlayers={savePlayers}
-          onResetScores={resetScores}
+          onSavePlayers={savePlayers} onResetScores={resetScores}
           diceActive={showDiceRoller && rollerHasRolled}
           rollerDice={rollerDice}
           currentPlayer={currentPlayer}
@@ -300,12 +300,10 @@ export default function App() {
             setDiceSelected(null)
           }}
         />
-
         {showDiceRoller && (
           <div className="shrink-0 safe-bottom">
             <DiceRoller
-              theme={theme}
-              isDark={isDark}
+              theme={theme} isDark={isDark}
               resetKey={rollerReset}
               canPlay={!!diceSelected}
               isMyTurn={!mp.isConnected || myPlayerIndex === currentPlayer}
@@ -323,22 +321,13 @@ export default function App() {
       </div>
 
       {showMultiplayer && (
-        <MultiplayerModal
-          mp={mp}
-          isDark={isDark}
-          players={players}
-          onConfirmPlayer={(index, name, minCount) => {
+        <MultiplayerModal mp={mp} isDark={isDark} players={players}
+          onConfirmPlayer={(index, name) => {
             setMyPlayerIndex(index)
-            const base = players.length >= (minCount ?? 2) ? [...players] : [...DEFAULT_PLAYERS]
+            const base = players.length >= 2 ? [...players] : [...DEFAULT_PLAYERS]
             base[index] = name
             setPlayers(base)
-            setScores(prev => {
-              const next = emptyScores(base)
-              base.forEach((_, i) => {
-                if (prev[i]) ROWS.forEach(r => { next[i][r.id] = prev[i][r.id] ?? {} })
-              })
-              return next
-            })
+            if (mp.isConnected) mp.sendAction({ action: 'registerName', index, name })
           }}
           onClose={() => setShowMultiplayer(false)}
         />

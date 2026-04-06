@@ -71,7 +71,7 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 export default function DicePartyMode({
   modeToggle, theme, isDark, onToggleTheme,
   mp, onOpenMultiplayer, myPlayerIndex, remoteDice,
-  onAdvanceTurn, onlineDpState, onDpStateChange,
+  onAdvanceTurn, onlineDpState, onDpStateChange, onDiceRoll,
 }) {
   const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
 
@@ -102,10 +102,10 @@ export default function DicePartyMode({
     })
   }
 
-  // Sincronizar dados al lanzar (ambos los envían al otro)
+  // Sincronizar dados al lanzar — usa el callback estable de App
   useEffect(() => {
-    if (isOnline && gs.hasRolled) {
-      mp.sendAction({ action: 'diceUpdate', dice: gs.dice, locked: gs.locked, rollsLeft: gs.rollsLeft })
+    if (isOnline && gs.hasRolled && onDiceRoll) {
+      onDiceRoll(gs.dice, gs.locked, gs.rollsLeft)
     }
   }, [gs.dice, gs.locked, gs.rollsLeft])
 
