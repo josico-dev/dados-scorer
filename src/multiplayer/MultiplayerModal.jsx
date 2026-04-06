@@ -60,17 +60,17 @@ export default function MultiplayerModal({ onClose, mp, isDark, players, onConfi
   }
 
   // Si ya estamos conectados → mostrar estado de conexión + desconectar
-  if (mp.isConnected && !mp.pickingPlayer) {
+  if (mp.isConnected && view !== 'guest-pick-player' && view !== 'host-pick-player') {
     return (
       <Modal onClose={onClose} t={t}>
         <div className="text-center">
           <div className="text-4xl mb-2">🤝</div>
           <h2 className="font-black text-lg mb-1" style={{ color: '#22c55e' }}>¡Conectados!</h2>
           <p className="text-sm mb-1" style={{ color: t.muted }}>
-            Juegas como <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>{mp.myName || (mp.isHost ? 'Jugador 1' : 'Jugador 2')}</span>
+            {mp.isHost ? 'Eres el Host (Jugador 1)' : 'Eres el Guest (Jugador 2)'}
           </p>
           <p className="text-xs mb-5" style={{ color: t.muted }}>
-            {mp.isHost ? 'Host — fuente de verdad del juego' : 'Guest — sincronizado con el host'}
+            {mp.isHost ? 'Fuente de verdad — controlas el estado' : 'Sincronizado con el host en tiempo real'}
           </p>
           <button onClick={() => { mp.disconnect(); onClose() }}
             className="w-full py-2.5 rounded-xl font-bold text-sm transition"

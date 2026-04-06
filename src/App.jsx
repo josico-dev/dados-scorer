@@ -36,8 +36,15 @@ export default function App() {
   const [currentPlayer,   setCurrentPlayer]   = useState(0)
   const [rollerReset,     setRollerReset]     = useState(0)
   const [diceSelected,    setDiceSelected]    = useState(null)
-  // myPlayerIndex: qué jugador soy yo en esta sesión (host=0, guest=1)
   const [myPlayerIndex,   setMyPlayerIndex]   = useState(0)
+
+  // Refs para leer estado actual dentro de callbacks sin stale closure
+  const playersRef = useRef(players)
+  const scoresRef  = useRef(scores)
+  const cpRef      = useRef(currentPlayer)
+  useEffect(() => { playersRef.current = players }, [players])
+  useEffect(() => { scoresRef.current  = scores  }, [scores])
+  useEffect(() => { cpRef.current      = currentPlayer }, [currentPlayer])
 
   // ── Multiplayer ──────────────────────────────────────────────────────────
   const mp = useMultiplayer({
@@ -46,7 +53,7 @@ export default function App() {
       if (!mpRef.current.isHost) return
       if (action.action === 'requestState') {
         // Host emite estado + asigna índice al guest (siempre el 1)
-        mpRef.current.sendState({ players, scores, currentPlayer, mode, assignedPlayerIndex: 1 })
+        mpRef.current.sendState({ players: playersRef.current, scores: scoresRef.current, currentPlayer: cpRef.current, mode, assignedPlayerIndex: 1 })
         return
       }
       if (action.action === 'updateScore') {
@@ -56,10 +63,10 @@ export default function App() {
         }))
       }
       if (action.action === 'nextPlayer') {
-        setCurrentPlayer(prev => (prev + 1) % players.length)
+        setCurrentPlayer(prev => (prev + 1) % playersRef.current.length)
       }
       if (action.action === 'reset') {
-        setScores(emptyScores(players))
+        setScores(emptyScores(playersRef.current))
       }
     },
     // Guest recibe el estado completo del host y lo aplica
