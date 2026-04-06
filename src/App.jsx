@@ -128,47 +128,60 @@ export default function App() {
   // ── Modo Dice Party ───────────────────────────────────────────────────────
   if (mode === 'dice-party') {
     return (
-      <DicePartyMode
-        theme={theme}
-        isDark={isDark}
-        modeToggle={<ModeToggle />}
-        themeToggle={<HeaderButtons />}
-        onToggleTheme={toggleTheme}
-      />
+      <>
+        <DicePartyMode
+          theme={theme}
+          isDark={isDark}
+          modeToggle={<ModeToggle />}
+          onToggleTheme={toggleTheme}
+          mp={mp}
+          onOpenMultiplayer={() => setShowMultiplayer(true)}
+        />
+        {showMultiplayer && (
+          <MultiplayerModal mp={mp} isDark={isDark} onClose={() => setShowMultiplayer(false)} />
+        )}
+      </>
     )
   }
 
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
     <div className="app-shell select-none" style={{ background: theme.appBg, color: theme.text }}>
-      <header className="shrink-0 backdrop-blur border-b px-3 py-2 flex items-center justify-between gap-2"
+      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-1.5 flex flex-col gap-1.5"
         style={{ background: theme.headerBg, borderColor: theme.borderSubtle }}>
-        <span className="text-xl">🎲</span>
-        <ModeToggle />
-        <HeaderButtons extra={
-          <>
-            <button onClick={() => setShowDiceRoller(v => !v)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-              style={{ background: showDiceRoller ? 'rgba(245,158,11,0.25)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: showDiceRoller ? '#f59e0b' : theme.text }}>
-              🎲
-            </button>
-            <button onClick={() => setShowMultiplayer(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition relative"
-              style={{ background: mp.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp.isConnected ? '#22c55e' : theme.text }}>
-              🌐{mp.isConnected ? ' ●' : ''}
-            </button>
-            <button onClick={() => setShowPlayersModal(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-              style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
-              👥
-            </button>
-            <button onClick={() => setShowResetModal(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-              style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
-              🔄
-            </button>
-          </>
-        } />
+        {/* Fila 1: icono + toggle de modo */}
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🎲</span>
+          <ModeToggle />
+        </div>
+        {/* Fila 2: acciones */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setShowDiceRoller(v => !v)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: showDiceRoller ? 'rgba(245,158,11,0.25)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: showDiceRoller ? '#f59e0b' : theme.text }}>
+            🎲 Dados
+          </button>
+          <button onClick={() => setShowMultiplayer(true)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: mp.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp.isConnected ? '#22c55e' : theme.text }}>
+            🌐{mp.isConnected ? ' ●' : ''}
+          </button>
+          <button onClick={() => setShowPlayersModal(true)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
+            👥
+          </button>
+          <button onClick={() => setShowResetModal(true)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+            🔄
+          </button>
+          <button onClick={toggleTheme}
+            className="px-2.5 py-1.5 rounded-lg text-sm transition ml-auto"
+            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col">

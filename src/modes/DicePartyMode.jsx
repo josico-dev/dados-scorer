@@ -63,7 +63,7 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function DicePartyMode({ modeToggle, themeToggle, theme, isDark, onToggleTheme }) {
+export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer }) {
   const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
   const [gs, setGs]           = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
   const [rolling, setRolling] = useState(false)
@@ -166,17 +166,27 @@ export default function DicePartyMode({ modeToggle, themeToggle, theme, isDark, 
   return (
     <div className="app-shell select-none" style={{ background: t.appBg, color: t.text }}>
 
-      {/* Header */}
-      <header className="shrink-0 backdrop-blur border-b px-3 py-2 flex items-center justify-between gap-2"
+      {/* Header — dos filas */}
+      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-1.5 flex flex-col gap-1.5"
         style={{ background: t.headerBg, borderColor: t.borderSubtle }}>
-        <span className="text-xl">🎲</span>
-        {modeToggle}
+        {/* Fila 1: icono + toggle de modo */}
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🎲</span>
+          {modeToggle}
+        </div>
+        {/* Fila 2: turno + acciones */}
         <div className="flex items-center gap-1.5">
           {phase !== 'done' && (
-            <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-bold">
+            <span className="px-2 py-1 rounded-lg text-xs font-bold"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
               {players[currentPlayer]} · {gs.turn + 1}/{TOTAL_TURNS * players.length}
             </span>
           )}
+          <button onClick={onOpenMultiplayer}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+            style={{ background: mp?.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp?.isConnected ? '#22c55e' : t.text }}>
+            🌐{mp?.isConnected ? ' ●' : ''}
+          </button>
           <button onClick={() => setShowPlayers(true)}
             className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
             style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>👥</button>
@@ -184,7 +194,7 @@ export default function DicePartyMode({ modeToggle, themeToggle, theme, isDark, 
             className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
             style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>🔄</button>
           <button onClick={onToggleTheme}
-            className="px-2.5 py-1.5 rounded-lg text-sm transition"
+            className="px-2.5 py-1.5 rounded-lg text-sm transition ml-auto"
             style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>
             {isDark ? '☀️' : '🌙'}
           </button>
