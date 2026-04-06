@@ -79,12 +79,13 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
 
   useEffect(() => { saveDPState(gs) }, [gs])
 
-  // Sincronizar dados al lanzar (si estamos online)
+  // Sincronizar dados al lanzar — ambos jugadores (host y guest) emiten sus dados
   useEffect(() => {
     if (mp?.isConnected && gs.hasRolled) {
+      // Ambos usan sendAction para enviar sus dados al otro
       mp.sendAction({ action: 'diceUpdate', dice: gs.dice, locked: gs.locked, rollsLeft: gs.rollsLeft })
     }
-  }, [gs.dice, gs.hasRolled])
+  }, [gs.dice, gs.locked, gs.rollsLeft])
 
   // Recibir dados del oponente (acción especial en DiceParty)
   // Se gestiona desde App vía onRemoteAction, pero también podemos escuchar aquí

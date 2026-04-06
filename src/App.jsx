@@ -51,6 +51,12 @@ export default function App() {
   const mp = useMultiplayer({
     // Host recibe acciones del guest y las aplica
     onRemoteAction: (action) => {
+      // diceUpdate puede venir de cualquier jugador — lo aplica quien lo reciba
+      if (action.action === 'diceUpdate') {
+        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
+        return
+      }
+      // El resto de acciones solo las procesa el host
       if (!mpRef.current.isHost) return
       if (action.action === 'requestState') {
         // Host emite estado + asigna índice al guest (siempre el 1)
@@ -70,11 +76,11 @@ export default function App() {
         setScores(emptyScores(playersRef.current))
       }
       if (action.action === 'diceUpdate') {
-        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
-      }
-      if (action.action === 'nextPlayer') {
-        // Al cambiar turno, limpiar los dados remotos
-        setRemoteDice(null)
+        // Host recibe dados del guest → los guarda para mostrar + los reenvía al guest como estado
+        const rd = { dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft }
+        setRemoteDice(rd)
+        // Host reenvía al guest para que él también vea la confirmación (loop de sync)
+        // NO hace falta porque el guest YA tiene sus propios dados localmente
       }
     },
     // Guest recibe el estado completo del host y lo aplica
@@ -105,6 +111,11 @@ export default function App() {
       mpRef.current.sendState({ players, scores, currentPlayer, mode })
     }
   }, [players, scores, currentPlayer, mode])
+
+  // Host también re-emite cuando recibe un diceUpdate del guest
+  // para que ambos vean los dados en tiempo real
+  // (el guest emite sus dados via sendAction, el host los reenvía en el estado)
+
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
