@@ -8,6 +8,8 @@ import { THEMES, loadTheme, saveTheme } from './theme'
 import DadosMode from './modes/DadosMode'
 import DicePartyMode from './modes/DicePartyMode'
 import DiceRoller from './components/DiceRoller'
+import { useMultiplayer } from './multiplayer/useMultiplayer'
+import MultiplayerModal from './multiplayer/MultiplayerModal'
 
 const MODE_KEY = 'dados-scorer-mode'
 const loadMode = () => { try { return localStorage.getItem(MODE_KEY) || 'dados' } catch { return 'dados' } }
@@ -24,6 +26,7 @@ export default function App() {
   const saved = loadState()
   const [players, setPlayers] = useState(saved?.players ?? DEFAULT_PLAYERS)
   const [scores,  setScores]  = useState(saved?.scores  ?? emptyScores(DEFAULT_PLAYERS))
+  const [showMultiplayer, setShowMultiplayer] = useState(false)
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal,   setShowResetModal]   = useState(false)
   const [showDiceRoller,   setShowDiceRoller]   = useState(false)
@@ -32,7 +35,25 @@ export default function App() {
   const [rollerHasRolled, setRollerHasRolled] = useState(false)
   const [currentPlayer,   setCurrentPlayer]   = useState(0)
   const [rollerReset,     setRollerReset]     = useState(0)
-  const [diceSelected,    setDiceSelected]    = useState(null) // celda seleccionada en DadosMode
+  const [diceSelected,    setDiceSelected]    = useState(null)
+
+  // ── Multiplayer ──────────────────────────────────────────────────────────
+  const mp = useMultiplayer({
+    onRemoteState: (state) => {
+      // Recibe estado del otro jugador y lo aplica
+      if (state.players)       setPlayers(state.players)
+      if (state.scores)        setScores(state.scores)
+      if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
+      if (state.mode)          setMode(state.mode)
+    },
+  })
+
+  // Cuando el host cambia el estado, lo emite al guest
+  useEffect(() => {
+    if (mp.isConnected && mp.isHost) {
+      mp.sendState({ players, scores, currentPlayer, mode })
+    }
+  }, [players, scores, currentPlayer])
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
@@ -131,6 +152,11 @@ export default function App() {
               style={{ background: showDiceRoller ? 'rgba(245,158,11,0.25)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: showDiceRoller ? '#f59e0b' : theme.text }}>
               🎲
             </button>
+            <button onClick={() => setShowMultiplayer(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition relative"
+              style={{ background: mp.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp.isConnected ? '#22c55e' : theme.text }}>
+              🌐{mp.isConnected ? ' ●' : ''}
+            </button>
             <button onClick={() => setShowPlayersModal(true)}
               className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
               style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
@@ -169,7 +195,15 @@ export default function App() {
             setDiceSelected(null)
           }}
         />
-        {showDiceRoller && (
+        {showMultiplayer && (
+        <MultiplayerModal
+          mp={mp}
+          isDark={isDark}
+          onClose={() => setShowMultiplayer(false)}
+        />
+      )}
+
+      {showDiceRoller && (
           <div className="shrink-0 safe-bottom">
             <DiceRoller
               theme={theme}
