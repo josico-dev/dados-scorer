@@ -39,21 +39,45 @@ export default function App() {
 
   // ── Multiplayer ──────────────────────────────────────────────────────────
   const mp = useMultiplayer({
+    // Host recibe acciones del guest y las aplica
+    onRemoteAction: (action) => {
+      if (!mpRef.current.isHost) return
+      if (action.action === 'requestState') {
+        // Guest pide el estado → host lo emite
+        mpRef.current.sendState({ players, scores, currentPlayer, mode })
+        return
+      }
+      if (action.action === 'updateScore') {
+        setScores(prev => ({
+          ...prev,
+          [action.pi]: { ...prev[action.pi], [action.rowId]: { ...prev[action.pi]?.[action.rowId], [action.subId]: action.value } },
+        }))
+      }
+      if (action.action === 'nextPlayer') {
+        setCurrentPlayer(prev => (prev + 1) % players.length)
+      }
+      if (action.action === 'reset') {
+        setScores(emptyScores(players))
+      }
+    },
+    // Guest recibe el estado completo del host y lo aplica
     onRemoteState: (state) => {
-      // Recibe estado del otro jugador y lo aplica
-      if (state.players)       setPlayers(state.players)
-      if (state.scores)        setScores(state.scores)
+      if (state.players !== undefined)       setPlayers(state.players)
+      if (state.scores  !== undefined)       setScores(state.scores)
       if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
-      if (state.mode)          setMode(state.mode)
+      if (state.mode    !== undefined)       setMode(state.mode)
     },
   })
 
-  // Cuando el host cambia el estado, lo emite al guest
+  // Host: emite estado completo a guest en cada cambio relevante
+  const mpRef = useRef(mp)
+  useEffect(() => { mpRef.current = mp }, [mp])
+
   useEffect(() => {
-    if (mp.isConnected && mp.isHost) {
-      mp.sendState({ players, scores, currentPlayer, mode })
+    if (mpRef.current.isConnected && mpRef.current.isHost) {
+      mpRef.current.sendState({ players, scores, currentPlayer, mode })
     }
-  }, [players, scores, currentPlayer])
+  }, [players, scores, currentPlayer, mode])
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
@@ -63,6 +87,11 @@ export default function App() {
   }, [themeName, theme.bodyBg])
 
   function updateScore(pi, rowId, sub, val) {
+    // Si somos guest en modo online, enviamos la acción al host en lugar de aplicar localmente
+    if (mp.isConnected && !mp.isHost) {
+      mp.sendAction({ action: 'updateScore', pi, rowId, subId: sub, value: val })
+      return
+    }
     setScores(prev => ({
       ...prev,
       [pi]: { ...prev[pi], [rowId]: { ...prev[pi][rowId], [sub]: val } },
@@ -202,7 +231,11 @@ export default function App() {
           onSelectionChange={setDiceSelected}
           onPlay={(pi, rowId, subId, value) => {
             updateScore(pi, rowId, subId, String(value))
-            setCurrentPlayer(prev => (prev + 1) % players.length)
+            if (mp.isConnected && !mp.isHost) {
+              mp.sendAction({ action: 'nextPlayer' })
+            } else {
+              setCurrentPlayer(prev => (prev + 1) % players.length)
+            }
             setRollerReset(r => r + 1)
             setDiceSelected(null)
           }}
@@ -229,7 +262,11 @@ export default function App() {
               onPlay={() => {
                 if (!diceSelected) return
                 updateScore(diceSelected.pi, diceSelected.rowId, diceSelected.subId, String(diceSelected.value))
-                setCurrentPlayer(prev => (prev + 1) % players.length)
+                if (mp.isConnected && !mp.isHost) {
+                  mp.sendAction({ action: 'nextPlayer' })
+                } else {
+                  setCurrentPlayer(prev => (prev + 1) % players.length)
+                }
                 setRollerReset(r => r + 1)
                 setDiceSelected(null)
               }}

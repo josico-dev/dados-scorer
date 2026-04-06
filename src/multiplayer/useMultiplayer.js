@@ -1,65 +1,78 @@
 // ─── Hook de multiplayer ──────────────────────────────────────────────────
 //
-// Gestiona todo el ciclo de vida de la conexión WebRTC y sincronización
-// de estado del juego.
-//
-// Uso:
-//   const mp = useMultiplayer({ gameState, onRemoteState })
-//   mp.startAsHost()    → devuelve código de oferta
-//   mp.joinAsGuest(code) → devuelve código de respuesta
-//   mp.confirmAnswer(code) → host confirma conexión
-//   mp.send(state)      → envía estado al otro jugador
-//   mp.status           → 'idle' | 'waiting' | 'connected' | 'error'
+// Arquitectura: el HOST es la fuente de verdad.
+// - Host recibe ACCIONES del guest y actualiza el estado
+// - Host emite el ESTADO completo a todos tras cada cambio
+// - Guest recibe el ESTADO y lo aplica (read-only salvo sus propias acciones)
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { GameRTC } from './rtc'
 
-export function useMultiplayer({ onRemoteState }) {
-  const [status,    setStatus]    = useState('idle')     // idle | offering | answering | connected | error
+export function useMultiplayer({ onRemoteState, onRemoteAction }) {
+  const [status,    setStatus]    = useState('idle')
   const [offerCode, setOfferCode] = useState('')
   const [error,     setError]     = useState('')
   const [isHost,    setIsHost]    = useState(false)
 
-  const rtcRef = useRef(null)
+  const rtcRef         = useRef(null)
+  // Refs para callbacks para evitar referencias stale
+  const onStateRef     = useRef(onRemoteState)
+  const onActionRef    = useRef(onRemoteAction)
+
+  useEffect(() => { onStateRef.current  = onRemoteState  }, [onRemoteState])
+  useEffect(() => { onActionRef.current = onRemoteAction }, [onRemoteAction])
 
   function cleanup() {
     rtcRef.current?.close()
     rtcRef.current = null
   }
 
-  // ── Host: crear oferta ───────────────────────────────────────────────────
+  function makeRTC(host) {
+    return new GameRTC({
+      isHost: host,
+      onStateUpdate: (msg) => {
+        if (msg._type === 'action') {
+          onActionRef.current?.(msg)
+        } else {
+          onStateRef.current?.(msg)
+        }
+      },
+      onConnected: () => {
+        setStatus('connected')
+        if (!host) {
+          // Guest pide el estado inicial al host
+          setTimeout(() => {
+            rtcRef.current?.send({ type: 'state', payload: { _type: 'action', action: 'requestState' } })
+          }, 400)
+        }
+      },
+      onDisconnected: () => { setStatus('idle'); setError('Conexión cerrada') },
+      onError:        msg => { setStatus('error'); setError(msg) },
+    })
+  }
 
+  // ── Host: crear oferta ───────────────────────────────────────────────────
   const startAsHost = useCallback(async () => {
     cleanup()
     setStatus('offering')
     setError('')
     setIsHost(true)
-
-    const rtc = new GameRTC({
-      isHost: true,
-      onStateUpdate: onRemoteState,
-      onConnected:   () => setStatus('connected'),
-      onDisconnected:() => { setStatus('idle'); setError('Conexión cerrada') },
-      onError:       msg => { setStatus('error'); setError(msg) },
-    })
+    const rtc = makeRTC(true)
     rtcRef.current = rtc
-
     try {
       const code = await rtc.createOffer()
       setOfferCode(code)
       return code
-    } catch (e) {
+    } catch {
       setStatus('error')
       setError('Error creando la oferta')
       return null
     }
-  }, [onRemoteState])
+  }, [])
 
-  // ── Host: confirmar answer recibido del guest ────────────────────────────
-
+  // ── Host: confirmar answer ────────────────────────────────────────────────
   const confirmAnswer = useCallback(async (answerCode) => {
     if (!rtcRef.current) return
-    setStatus('connecting')
     try {
       await rtcRef.current.receiveAnswer(answerCode)
     } catch {
@@ -68,41 +81,35 @@ export function useMultiplayer({ onRemoteState }) {
     }
   }, [])
 
-  // ── Guest: unirse con el código de oferta ────────────────────────────────
-
-  const joinAsGuest = useCallback(async (offerCode) => {
+  // ── Guest: unirse ─────────────────────────────────────────────────────────
+  const joinAsGuest = useCallback(async (code) => {
     cleanup()
     setStatus('answering')
     setError('')
     setIsHost(false)
-
-    const rtc = new GameRTC({
-      isHost: false,
-      onStateUpdate: onRemoteState,
-      onConnected:   () => setStatus('connected'),
-      onDisconnected:() => { setStatus('idle'); setError('Conexión cerrada') },
-      onError:       msg => { setStatus('error'); setError(msg) },
-    })
+    const rtc = makeRTC(false)
     rtcRef.current = rtc
-
     try {
-      const answerCode = await rtc.receiveOffer(offerCode)
+      const answerCode = await rtc.receiveOffer(code)
       return answerCode
     } catch {
       setStatus('error')
       setError('Código de oferta inválido')
       return null
     }
-  }, [onRemoteState])
+  }, [])
 
-  // ── Enviar estado al otro jugador ────────────────────────────────────────
-
+  // ── Enviar estado completo (host → guest) ─────────────────────────────────
   const sendState = useCallback((state) => {
     rtcRef.current?.send({ type: 'state', payload: state })
   }, [])
 
-  // ── Desconectar ──────────────────────────────────────────────────────────
+  // ── Enviar acción (guest → host) ──────────────────────────────────────────
+  const sendAction = useCallback((action) => {
+    rtcRef.current?.send({ type: 'state', payload: { ...action, _type: 'action' } })
+  }, [])
 
+  // ── Desconectar ───────────────────────────────────────────────────────────
   const disconnect = useCallback(() => {
     cleanup()
     setStatus('idle')
@@ -111,8 +118,8 @@ export function useMultiplayer({ onRemoteState }) {
   }, [])
 
   return {
-    status,       // 'idle' | 'offering' | 'answering' | 'connecting' | 'connected' | 'error'
-    offerCode,    // código a compartir (host)
+    status,
+    offerCode,
     error,
     isHost,
     isConnected: status === 'connected',
@@ -120,6 +127,7 @@ export function useMultiplayer({ onRemoteState }) {
     confirmAnswer,
     joinAsGuest,
     sendState,
+    sendAction,
     disconnect,
   }
 }
