@@ -180,7 +180,18 @@ export default function App() {
           onOpenMultiplayer={() => setShowMultiplayer(true)}
         />
         {showMultiplayer && (
-          <MultiplayerModal mp={mp} isDark={isDark} onClose={() => setShowMultiplayer(false)} />
+          <MultiplayerModal
+            mp={mp}
+            isDark={isDark}
+            players={players}
+            onConfirmPlayer={(index, name) => {
+              setMyPlayerIndex(index)
+              const newPlayers = [...players]
+              newPlayers[index] = name
+              setPlayers(newPlayers)
+            }}
+            onClose={() => setShowMultiplayer(false)}
+          />
         )}
       </>
     )
@@ -259,6 +270,14 @@ export default function App() {
         <MultiplayerModal
           mp={mp}
           isDark={isDark}
+          players={players}
+          onConfirmPlayer={(index, name) => {
+            setMyPlayerIndex(index)
+            // Renombra al jugador en el tablero con el nombre elegido
+            const newPlayers = [...players]
+            newPlayers[index] = name
+            setPlayers(newPlayers)
+          }}
           onClose={() => setShowMultiplayer(false)}
         />
       )}

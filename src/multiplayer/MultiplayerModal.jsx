@@ -6,17 +6,24 @@
 
 import { useState } from 'react'
 
-export default function MultiplayerModal({ onClose, mp, isDark }) {
-  const [view,       setView]       = useState('menu')    // menu | host-offer | host-answer | guest-offer | guest-answer
+export default function MultiplayerModal({ onClose, mp, isDark, players, onConfirmPlayer }) {
+  const [view,       setView]       = useState('menu')
   const [inputCode,  setInputCode]  = useState('')
   const [answerCode, setAnswerCode] = useState('')
   const [copied,     setCopied]     = useState(false)
+  const [nameInput,  setNameInput]  = useState('')
 
   const t = isDark
     ? { bg: '#1a1730', border: 'rgba(255,255,255,0.1)', text: '#f1f5f9', muted: 'rgba(255,255,255,0.5)', input: 'rgba(255,255,255,0.08)' }
     : { bg: '#ffffff',  border: 'rgba(0,0,0,0.12)',       text: '#0f172a', muted: '#6b7280',              input: 'rgba(0,0,0,0.06)'       }
 
   async function handleCreateRoom() {
+    setView('host-pick-player')
+  }
+
+  async function handleHostPickedPlayer() {
+    const name = nameInput.trim() || players?.[0] || 'Jugador 1'
+    onConfirmPlayer?.(0, name)  // host = índice 0
     setView('host-offer')
     const code = await mp.startAsHost()
     if (!code) setView('menu')
@@ -26,8 +33,18 @@ export default function MultiplayerModal({ onClose, mp, isDark }) {
     if (!inputCode.trim()) return
     setView('guest-answer')
     const answer = await mp.joinAsGuest(inputCode.trim())
-    if (answer) setAnswerCode(answer)
-    else setView('guest-offer')
+    if (answer) {
+      setAnswerCode(answer)
+      setView('guest-pick-player')
+    } else {
+      setView('guest-offer')
+    }
+  }
+
+  function handleGuestPickedPlayer() {
+    const name = nameInput.trim() || players?.[1] || 'Jugador 2'
+    onConfirmPlayer?.(1, name)  // guest = índice 1
+    setView('guest-answer-show')
   }
 
   async function handleConfirmAnswer() {
@@ -42,15 +59,18 @@ export default function MultiplayerModal({ onClose, mp, isDark }) {
     })
   }
 
-  // Si ya estamos conectados
-  if (mp.isConnected) {
+  // Si ya estamos conectados → mostrar estado de conexión + desconectar
+  if (mp.isConnected && !mp.pickingPlayer) {
     return (
       <Modal onClose={onClose} t={t}>
         <div className="text-center">
-          <div className="text-4xl mb-3">🤝</div>
+          <div className="text-4xl mb-2">🤝</div>
           <h2 className="font-black text-lg mb-1" style={{ color: '#22c55e' }}>¡Conectados!</h2>
-          <p className="text-sm mb-4" style={{ color: t.muted }}>
-            {mp.isHost ? 'Eres el Host — controlas el estado de la partida.' : 'Eres el Guest — el host sincroniza el estado.'}
+          <p className="text-sm mb-1" style={{ color: t.muted }}>
+            Juegas como <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>{mp.myName || (mp.isHost ? 'Jugador 1' : 'Jugador 2')}</span>
+          </p>
+          <p className="text-xs mb-5" style={{ color: t.muted }}>
+            {mp.isHost ? 'Host — fuente de verdad del juego' : 'Guest — sincronizado con el host'}
           </p>
           <button onClick={() => { mp.disconnect(); onClose() }}
             className="w-full py-2.5 rounded-xl font-bold text-sm transition"
@@ -84,6 +104,32 @@ export default function MultiplayerModal({ onClose, mp, isDark }) {
             </button>
           </div>
         </>
+      )}
+
+      {/* ── Host: elegir jugador ── */}
+      {view === 'host-pick-player' && (
+        <PlayerPicker
+          title="¿Cómo te llamas?"
+          subtitle="Serás el Jugador 1 (Host)"
+          defaultName={players?.[0] || 'Jugador 1'}
+          nameInput={nameInput}
+          setNameInput={setNameInput}
+          onConfirm={handleHostPickedPlayer}
+          t={t}
+        />
+      )}
+
+      {/* ── Guest: elegir jugador ── */}
+      {view === 'guest-pick-player' && (
+        <PlayerPicker
+          title="¿Cómo te llamas?"
+          subtitle="Serás el Jugador 2 (Guest)"
+          defaultName={players?.[1] || 'Jugador 2'}
+          nameInput={nameInput}
+          setNameInput={setNameInput}
+          onConfirm={handleGuestPickedPlayer}
+          t={t}
+        />
       )}
 
       {/* ── Host: mostrar código de oferta ── */}
@@ -144,6 +190,16 @@ export default function MultiplayerModal({ onClose, mp, isDark }) {
         </>
       )}
 
+      {/* ── Guest: mostrar código de respuesta (tras elegir jugador) ── */}
+      {view === 'guest-answer-show' && (
+        <>
+          <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Paso 2 — Manda esto al host</h2>
+          <p className="text-xs mb-3" style={{ color: t.muted }}>Copia este código y mándalo al host por WhatsApp.</p>
+          <CodeBox code={answerCode} onCopy={copyCode} copied={copied} t={t} label="Tu código de respuesta" />
+          <p className="text-xs mt-3 text-center" style={{ color: t.muted }}>Esperando que el host confirme...</p>
+        </>
+      )}
+
       {/* ── Guest: mostrar código de respuesta ── */}
       {view === 'guest-answer' && (
         <>
@@ -198,6 +254,33 @@ function Modal({ children, onClose, t }) {
         {children}
       </div>
     </div>
+  )
+}
+
+function PlayerPicker({ title, subtitle, defaultName, nameInput, setNameInput, onConfirm, t }) {
+  return (
+    <>
+      <div className="text-center mb-4">
+        <div className="text-4xl mb-2">👤</div>
+        <h2 className="font-black text-lg" style={{ color: t.text }}>{title}</h2>
+        <p className="text-xs mt-1" style={{ color: t.muted }}>{subtitle}</p>
+      </div>
+      <input
+        autoFocus
+        value={nameInput}
+        onChange={e => setNameInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && onConfirm()}
+        placeholder={defaultName}
+        className="w-full rounded-xl px-4 py-3 text-base font-bold text-center focus:outline-none mb-4"
+        style={{ background: t.input, color: t.text, border: `2px solid rgba(124,58,237,0.4)` }}
+      />
+      <button
+        onClick={onConfirm}
+        className="w-full py-3 rounded-xl font-black text-sm transition active:scale-95"
+        style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff' }}>
+        ¡Listo!
+      </button>
+    </>
   )
 }
 
