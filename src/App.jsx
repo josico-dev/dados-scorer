@@ -147,40 +147,39 @@ export default function App() {
   // ── Modo Dados ────────────────────────────────────────────────────────────
   return (
     <div className="app-shell select-none" style={{ background: theme.appBg, color: theme.text }}>
-      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-1.5 flex flex-col gap-1.5"
+      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-2 flex flex-col gap-2"
         style={{ background: theme.headerBg, borderColor: theme.borderSubtle }}>
-        {/* Fila 1: icono + toggle de modo */}
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🎲</span>
-          <ModeToggle />
+
+        {/* Fila 1: logo a la izq, toggle centrado */}
+        <div className="flex items-center">
+          <span className="text-xl w-8">🎲</span>
+          <div className="flex-1 flex justify-center">
+            <ModeToggle />
+          </div>
+          <div className="w-8" /> {/* espacio para equilibrar el logo */}
         </div>
-        {/* Fila 2: acciones */}
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => setShowDiceRoller(v => !v)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: showDiceRoller ? 'rgba(245,158,11,0.25)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: showDiceRoller ? '#f59e0b' : theme.text }}>
-            🎲 Dados
-          </button>
-          <button onClick={() => setShowMultiplayer(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: mp.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp.isConnected ? '#22c55e' : theme.text }}>
-            🌐{mp.isConnected ? ' ●' : ''}
-          </button>
-          <button onClick={() => setShowPlayersModal(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
-            👥
-          </button>
-          <button onClick={() => setShowResetModal(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
-            🔄
-          </button>
-          <button onClick={toggleTheme}
-            className="px-2.5 py-1.5 rounded-lg text-sm transition ml-auto"
-            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
-            {isDark ? '☀️' : '🌙'}
-          </button>
+
+        {/* Fila 2: acciones distribuidas uniformemente */}
+        <div className="flex items-center justify-between gap-1">
+          {[
+            { label: '🎲', title: 'Dados', active: showDiceRoller, onClick: () => setShowDiceRoller(v => !v), activeColor: '#f59e0b' },
+            { label: mp.isConnected ? '🌐 ●' : '🌐', title: 'Online', active: mp.isConnected, onClick: () => setShowMultiplayer(true), activeColor: '#22c55e' },
+            { label: '👥', title: 'Jugadores', active: false, onClick: () => setShowPlayersModal(true) },
+            { label: '🔄', title: 'Reset',     active: false, onClick: () => setShowResetModal(true),   danger: true },
+            { label: isDark ? '☀️' : '🌙', title: 'Tema', active: false, onClick: toggleTheme },
+          ].map(btn => (
+            <button key={btn.title} onClick={btn.onClick}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium transition flex flex-col items-center gap-0.5"
+              style={{
+                background: btn.active
+                  ? `rgba(${btn.activeColor === '#f59e0b' ? '245,158,11' : '34,197,94'},0.2)`
+                  : btn.danger ? 'rgba(239,68,68,0.12)' : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
+                color: btn.active ? btn.activeColor : btn.danger ? '#f87171' : theme.textMuted,
+              }}>
+              <span className="text-sm leading-none">{btn.label}</span>
+              <span className="text-[9px] leading-none">{btn.title}</span>
+            </button>
+          ))}
         </div>
       </header>
 

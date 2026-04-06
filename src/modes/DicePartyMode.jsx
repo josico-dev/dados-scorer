@@ -167,37 +167,43 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
     <div className="app-shell select-none" style={{ background: t.appBg, color: t.text }}>
 
       {/* Header — dos filas */}
-      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-1.5 flex flex-col gap-1.5"
+      <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-2 flex flex-col gap-2"
         style={{ background: t.headerBg, borderColor: t.borderSubtle }}>
-        {/* Fila 1: icono + toggle de modo */}
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🎲</span>
-          {modeToggle}
-        </div>
-        {/* Fila 2: turno + acciones */}
-        <div className="flex items-center gap-1.5">
-          {phase !== 'done' && (
-            <span className="px-2 py-1 rounded-lg text-xs font-bold"
-              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
-              {players[currentPlayer]} · {gs.turn + 1}/{TOTAL_TURNS * players.length}
+
+        {/* Fila 1: logo + toggle centrado + turno */}
+        <div className="flex items-center">
+          <span className="text-xl w-8">🎲</span>
+          <div className="flex-1 flex justify-center">
+            {modeToggle}
+          </div>
+          {phase !== 'done' ? (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', whiteSpace: 'nowrap' }}>
+              {players[currentPlayer].split(' ')[0]} {gs.turn + 1}/{TOTAL_TURNS * players.length}
             </span>
-          )}
-          <button onClick={onOpenMultiplayer}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: mp?.isConnected ? 'rgba(34,197,94,0.2)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'), color: mp?.isConnected ? '#22c55e' : t.text }}>
-            🌐{mp?.isConnected ? ' ●' : ''}
-          </button>
-          <button onClick={() => setShowPlayers(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>👥</button>
-          <button onClick={() => setShowReset(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
-            style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>🔄</button>
-          <button onClick={onToggleTheme}
-            className="px-2.5 py-1.5 rounded-lg text-sm transition ml-auto"
-            style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: t.text }}>
-            {isDark ? '☀️' : '🌙'}
-          </button>
+          ) : <div className="w-8" />}
+        </div>
+
+        {/* Fila 2: acciones distribuidas */}
+        <div className="flex items-center justify-between gap-1">
+          {[
+            { label: mp?.isConnected ? '🌐 ●' : '🌐', title: 'Online',     active: !!mp?.isConnected, onClick: onOpenMultiplayer, activeColor: '#22c55e' },
+            { label: '👥', title: 'Jugadores', active: false, onClick: () => setShowPlayers(true) },
+            { label: '🔄', title: 'Reset',     active: false, onClick: () => setShowReset(true), danger: true },
+            { label: isDark ? '☀️' : '🌙', title: 'Tema', active: false, onClick: onToggleTheme },
+          ].map(btn => (
+            <button key={btn.title} onClick={btn.onClick}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium transition flex flex-col items-center gap-0.5"
+              style={{
+                background: btn.active
+                  ? 'rgba(34,197,94,0.2)'
+                  : btn.danger ? 'rgba(239,68,68,0.12)' : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
+                color: btn.active ? btn.activeColor : btn.danger ? '#f87171' : t.textMuted,
+              }}>
+              <span className="text-sm leading-none">{btn.label}</span>
+              <span className="text-[9px] leading-none">{btn.title}</span>
+            </button>
+          ))}
         </div>
       </header>
 
