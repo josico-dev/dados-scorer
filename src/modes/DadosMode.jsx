@@ -24,6 +24,7 @@ export default function DadosMode({
   players, scores, showPlayersModal, showResetModal,
   onUpdateScore, onClosePlayers, onCloseReset, onSavePlayers, onResetScores,
   diceActive, rollerDice, currentPlayer, onPlay, onSelectionChange,
+  myPlayerIndex, isOnline,
 }) {
   const t = theme ?? {}
 
@@ -31,10 +32,10 @@ export default function DadosMode({
 
   function handleCellClick(pi, rowId, subId) {
     if (!diceActive || pi !== currentPlayer) return
+    // Online: solo puedes jugar en tu propia columna cuando es tu turno
+    if (isOnline && myPlayerIndex !== null && pi !== myPlayerIndex) return
     const count = suggestDice(rowId, rollerDice)
     if (count === 0) return
-    // Guardamos el NÚMERO DE DADOS (no el resultado final)
-    // ScoreCell ya multiplica por faceValue, igual que en modo manual
     const next = { pi, rowId, subId, value: count }
     setSelected(next)
     onSelectionChange?.(next)
@@ -54,14 +55,24 @@ export default function DadosMode({
             <tr>
               <th className="sticky left-0 z-20 w-12 min-w-[48px]"
                 style={{ background: t.headerBg ?? '#0a081e' }} />
-              {players.map((name, i) => (
-                <th key={i} colSpan={2} className="text-center px-1 pt-2 pb-1">
-                  <span className="block text-xs font-bold uppercase tracking-wider truncate max-w-[120px] mx-auto"
-                    style={{ color: diceActive && i === currentPlayer ? '#f59e0b' : '#a78bfa' }}>
-                    {name}{diceActive && i === currentPlayer ? ' ←' : ''}
-                  </span>
-                </th>
-              ))}
+              {players.map((name, i) => {
+                const isMe      = isOnline && i === myPlayerIndex
+                const isMyTurn  = i === currentPlayer
+                return (
+                  <th key={i} colSpan={2} className="text-center px-1 pt-2 pb-1">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="block text-xs font-bold uppercase tracking-wider truncate max-w-[120px]"
+                        style={{ color: isMyTurn ? '#f59e0b' : '#a78bfa' }}>
+                        {name}{isMyTurn ? ' ▶' : ''}
+                      </span>
+                      {isMe && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>TÚ</span>
+                      )}
+                    </div>
+                  </th>
+                )
+              })}
             </tr>
             <tr>
               <th className="sticky left-0 z-20 text-center px-2 py-1 text-[10px] font-medium uppercase w-12 min-w-[48px]"

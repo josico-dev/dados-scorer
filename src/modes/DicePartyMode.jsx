@@ -63,7 +63,7 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer }) {
+export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer, myPlayerIndex }) {
   const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
   const [gs, setGs]           = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
   const [rolling, setRolling] = useState(false)
@@ -94,6 +94,8 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
 
   function selectCombo(comboId) {
     if (!gs.hasRolled || gs.phase !== 'playing') return
+    // Online: solo puedes seleccionar en tu turno
+    if (mp?.isConnected && myPlayerIndex !== null && myPlayerIndex !== gs.currentPlayer) return
     const pot = calcPotential(gs.dice, gs.scores[gs.currentPlayer], gs.jokerActive, gs.jokerUpperId)
     if (!pot[comboId]?.available) return
     setGs(prev => ({ ...prev, selectedCombo: prev.selectedCombo === comboId ? null : comboId }))
@@ -215,6 +217,8 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
           <Scorecard
             theme={t}
             isDark={isDark}
+            myPlayerIndex={myPlayerIndex}
+            isOnline={!!mp?.isConnected}
             players={players}
             scores={scores}
             potential={potential}
@@ -333,7 +337,7 @@ function InfoModal({ combo, onClose }) {
 // Upper y Lower son separadores sutiles, sin cabeceras dominantes.
 
 function Scorecard({
-  theme, isDark,
+  theme, isDark, myPlayerIndex, isOnline,
   players, scores, potential, selectedCombo, forcedCombo,
   upperSums, upperBonuses, totals, jokerBonuses,
   onSelectCombo, currentPlayer, hasRolled, phase,
@@ -388,12 +392,22 @@ function Scorecard({
       {/* Cabecera */}
       <div className="grid items-center border-b" style={{ gridTemplateColumns: gridCols, background: headerBg, borderColor }}>
         <div className="py-2 pl-3 text-xs font-semibold uppercase tracking-wider" style={{ color: textMuted }}>Combinación</div>
-        {players.map((name, pi) => (
-          <div key={pi} className="text-center py-2 text-xs font-bold truncate px-1"
-            style={{ color: pi === currentPlayer && phase === 'playing' ? '#f59e0b' : textMuted }}>
-            {name}
-          </div>
-        ))}
+        {players.map((name, pi) => {
+          const isMe     = isOnline && pi === myPlayerIndex
+          const isMyTurn = pi === currentPlayer && phase === 'playing'
+          return (
+            <div key={pi} className="flex flex-col items-center py-1 px-1 gap-0.5">
+              <span className="text-xs font-bold truncate max-w-full"
+                style={{ color: isMyTurn ? '#f59e0b' : textMuted }}>
+                {name}{isMyTurn ? ' ▶' : ''}
+              </span>
+              {isMe && (
+                <span className="text-[8px] font-bold px-1 py-0.5 rounded-full leading-none"
+                  style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>TÚ</span>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Separador Superior */}

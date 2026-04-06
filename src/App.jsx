@@ -36,6 +36,8 @@ export default function App() {
   const [currentPlayer,   setCurrentPlayer]   = useState(0)
   const [rollerReset,     setRollerReset]     = useState(0)
   const [diceSelected,    setDiceSelected]    = useState(null)
+  // myPlayerIndex: qué jugador soy yo en esta sesión (host=0, guest=1)
+  const [myPlayerIndex,   setMyPlayerIndex]   = useState(0)
 
   // ── Multiplayer ──────────────────────────────────────────────────────────
   const mp = useMultiplayer({
@@ -43,8 +45,8 @@ export default function App() {
     onRemoteAction: (action) => {
       if (!mpRef.current.isHost) return
       if (action.action === 'requestState') {
-        // Guest pide el estado → host lo emite
-        mpRef.current.sendState({ players, scores, currentPlayer, mode })
+        // Host emite estado + asigna índice al guest (siempre el 1)
+        mpRef.current.sendState({ players, scores, currentPlayer, mode, assignedPlayerIndex: 1 })
         return
       }
       if (action.action === 'updateScore') {
@@ -66,8 +68,18 @@ export default function App() {
       if (state.scores  !== undefined)       setScores(state.scores)
       if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
       if (state.mode    !== undefined)       setMode(state.mode)
+      // El host nos asigna nuestro índice de jugador
+      if (state.assignedPlayerIndex !== undefined) setMyPlayerIndex(state.assignedPlayerIndex)
     },
   })
+
+  // Al conectarse como host, nos asignamos el índice 0
+  // Al conectarse como guest, el host nos asignará el índice 1
+  useEffect(() => {
+    if (mp.isConnected) {
+      setMyPlayerIndex(mp.isHost ? 0 : 1)
+    }
+  }, [mp.isConnected, mp.isHost])
 
   // Host: emite estado completo a guest en cada cambio relevante
   const mpRef = useRef(mp)
@@ -164,6 +176,7 @@ export default function App() {
           modeToggle={<ModeToggle />}
           onToggleTheme={toggleTheme}
           mp={mp}
+          myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
           onOpenMultiplayer={() => setShowMultiplayer(true)}
         />
         {showMultiplayer && (
@@ -228,6 +241,8 @@ export default function App() {
           diceActive={showDiceRoller && rollerHasRolled}
           rollerDice={rollerDice}
           currentPlayer={currentPlayer}
+          myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
+          isOnline={mp.isConnected}
           onSelectionChange={setDiceSelected}
           onPlay={(pi, rowId, subId, value) => {
             updateScore(pi, rowId, subId, String(value))
