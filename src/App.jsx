@@ -136,24 +136,24 @@ export default function App() {
   // ── Helpers de juego ─────────────────────────────────────────────────────
 
   const updateScore = useCallback((pi, rowId, sub, val) => {
-    if (mp.isConnected && !mp.isHost) {
-      mp.sendAction({ action: 'updateScore', pi, rowId, subId: sub, value: val })
+    if (mpRef.current?.isConnected && !mpRef.current?.isHost) {
+      mpRef.current.sendAction({ action: 'updateScore', pi, rowId, subId: sub, value: val })
       return
     }
     setScores(prev => ({
       ...prev,
       [pi]: { ...prev[pi], [rowId]: { ...prev[pi][rowId], [sub]: val } },
     }))
-  }, [mp.isConnected, mp.isHost])
+  }, [])
 
   const advanceTurn = useCallback(() => {
-    if (mp.isConnected && !mp.isHost) {
-      mp.sendAction({ action: 'nextPlayer' })
+    if (mpRef.current?.isConnected && !mpRef.current?.isHost) {
+      mpRef.current.sendAction({ action: 'nextPlayer' })
     } else {
       setCurrentPlayer(prev => (prev + 1) % stateRef.current.players.length)
       setRemoteDice(null)
     }
-  }, [mp.isConnected, mp.isHost])
+  }, [])
 
   // Callback para DiceParty: sincroniza estado de partida
   const onDpStateChange = useCallback((newState) => {
@@ -171,10 +171,10 @@ export default function App() {
 
   // Callback para DiceParty: sincronizar dados en vuelo
   const onDiceRoll = useCallback((dice, locked, rollsLeft) => {
-    if (mp.isConnected) {
-      mp.sendAction({ action: 'diceUpdate', dice, locked, rollsLeft })
+    if (mpRef.current?.isConnected) {
+      mpRef.current.sendAction({ action: 'diceUpdate', dice, locked, rollsLeft })
     }
-  }, [mp.isConnected])
+  }, [])
 
   function savePlayers(names) {
     setPlayers(names)

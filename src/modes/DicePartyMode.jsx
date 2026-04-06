@@ -121,12 +121,16 @@ export default function DicePartyMode({
     })
   }, [onDpStateChange])
 
-  // Sincronizar dados al lanzar (el que lanza notifica al otro)
+  // Ref para onDiceRoll — siempre actualizado, nunca stale
+  const onDiceRollRef = useRef(onDiceRoll)
+  useEffect(() => { onDiceRollRef.current = onDiceRoll }, [onDiceRoll])
+
+  // Sincronizar dados al lanzar — useEffect es el lugar correcto (no dentro del updater)
   useEffect(() => {
-    if (isOnline && gs.hasRolled && onDiceRoll) {
-      onDiceRoll(gs.dice, gs.locked, gs.rollsLeft)
+    if (isOnline && gs.hasRolled) {
+      onDiceRollRef.current?.(gs.dice, gs.locked, gs.rollsLeft)
     }
-  }, [gs.dice, gs.locked, gs.rollsLeft])
+  }, [gs.dice, gs.hasRolled, isOnline])
 
   // ── Acciones ──────────────────────────────────────────────────────────
 
@@ -139,10 +143,7 @@ export default function DicePartyMode({
       setGs(prev => {
         const newDice = rollDice(prev.dice, prev.locked)
         const { jokerActive, jokerUpperId } = detectJoker(newDice, prev.scores[prev.currentPlayer])
-        const next = { ...prev, dice: newDice, rollsLeft: prev.rollsLeft - 1, hasRolled: true, jokerActive, jokerUpperId, selectedCombo: null }
-        // Notificar dados al otro jugador inmediatamente
-        if (onDiceRoll) onDiceRoll(newDice, prev.locked, prev.rollsLeft - 1)
-        return next
+        return { ...prev, dice: newDice, rollsLeft: prev.rollsLeft - 1, hasRolled: true, jokerActive, jokerUpperId, selectedCombo: null }
       })
       setRolling(false)
     }, 280)
