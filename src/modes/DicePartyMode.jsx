@@ -68,28 +68,46 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer, myPlayerIndex, remoteDice }) {
+export default function DicePartyMode({
+  modeToggle, theme, isDark, onToggleTheme,
+  mp, onOpenMultiplayer, myPlayerIndex, remoteDice,
+  onAdvanceTurn, onlineDpState, onDpStateChange,
+}) {
   const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
+
+  const isOnline = !!mp?.isConnected
   const [gs, setGs]               = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
   const [rolling, setRolling]     = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [showPlayers, setShowPlayers] = useState(false)
-  // Dados del oponente (para modo espectador)
-  const [opponentDice, setOpponentDice] = useState(null)
 
+  // Guardar en localStorage
   useEffect(() => { saveDPState(gs) }, [gs])
 
-  // Sincronizar dados al lanzar — ambos jugadores (host y guest) emiten sus dados
+  // Cuando llega estado online del host, aplicarlo localmente
   useEffect(() => {
-    if (mp?.isConnected && gs.hasRolled) {
-      // Ambos usan sendAction para enviar sus dados al otro
+    if (!isOnline || !onlineDpState) return
+    setGs(prev => ({ ...onlineDpState, dice: prev.dice, locked: prev.locked, rolling: prev.rolling }))
+  }, [JSON.stringify(onlineDpState)])
+
+  // Función para actualizar estado y notificar a App (que lo sincroniza al otro)
+  function updateGs(updater) {
+    setGs(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      if (isOnline && onDpStateChange) {
+        // Enviar versión sin los dados en vuelo (se sincronizan por diceUpdate)
+        onDpStateChange({ ...next, dice: prev.dice, locked: prev.locked })
+      }
+      return next
+    })
+  }
+
+  // Sincronizar dados al lanzar (ambos los envían al otro)
+  useEffect(() => {
+    if (isOnline && gs.hasRolled) {
       mp.sendAction({ action: 'diceUpdate', dice: gs.dice, locked: gs.locked, rollsLeft: gs.rollsLeft })
     }
   }, [gs.dice, gs.locked, gs.rollsLeft])
-
-  // Recibir dados del oponente (acción especial en DiceParty)
-  // Se gestiona desde App vía onRemoteAction, pero también podemos escuchar aquí
-  // usando un prop que App nos pase con los dados remotos
 
 
   // ── Acciones de turno ─────────────────────────────────────────────────
@@ -127,7 +145,7 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
 
   function handlePlay() {
     if (!gs.selectedCombo || !gs.hasRolled) return
-    const { currentPlayer, scores, dice, jokerBonuses, jokerActive, jokerUpperId } = gs
+    const { currentPlayer, scores, dice, jokerBonuses, jokerActive, jokerUpperId, players } = gs
     const potential = calcPotential(dice, scores[currentPlayer], jokerActive, jokerUpperId)
     const entry = potential[gs.selectedCombo]
     if (!entry?.available) return
@@ -136,16 +154,14 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
       pi !== currentPlayer ? ps : { ...ps, [gs.selectedCombo]: entry.score }
     )
     const newJokerBonuses = jokerBonuses.map((b, pi) => pi === currentPlayer && jokerActive ? b + 1 : b)
-
-    const nextPlayer = (currentPlayer + 1) % gs.players.length
+    const nextPlayer = (currentPlayer + 1) % players.length
     const nextTurn   = gs.turn + 1
-    const gameOver   = nextTurn >= TOTAL_TURNS * gs.players.length
+    const gameOver   = nextTurn >= TOTAL_TURNS * players.length
 
-    setGs(prev => ({
-      ...prev,
+    const newState = {
       scores        : newScores,
       jokerBonuses  : newJokerBonuses,
-      currentPlayer : gameOver ? prev.currentPlayer : nextPlayer,
+      currentPlayer : gameOver ? currentPlayer : nextPlayer,
       turn          : nextTurn,
       dice          : [0, 0, 0, 0, 0],
       locked        : [false, false, false, false, false],
@@ -155,7 +171,9 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
       jokerUpperId  : null,
       selectedCombo : null,
       phase         : gameOver ? 'done' : 'playing',
-    }))
+    }
+
+    updateGs(prev => ({ ...prev, ...newState }))
   }
 
   function handleReset() {

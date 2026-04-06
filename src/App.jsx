@@ -19,113 +19,113 @@ export default function App() {
   const [mode,      setMode]      = useState(() => loadMode())
   const [themeName, setThemeName] = useState(() => loadTheme())
 
-  const theme = THEMES[themeName] ?? THEMES.dark
+  const theme  = THEMES[themeName] ?? THEMES.dark
   const isDark = themeName === 'dark'
 
   // ── Estado modo Dados ────────────────────────────────────────────────────
   const saved = loadState()
   const [players, setPlayers] = useState(saved?.players ?? DEFAULT_PLAYERS)
   const [scores,  setScores]  = useState(saved?.scores  ?? emptyScores(DEFAULT_PLAYERS))
-  const [showMultiplayer, setShowMultiplayer] = useState(false)
+  const [showMultiplayer,  setShowMultiplayer]  = useState(false)
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal,   setShowResetModal]   = useState(false)
   const [showDiceRoller,   setShowDiceRoller]   = useState(false)
-  // Estado de los dados compartido con el tablero
-  const [rollerDice,      setRollerDice]      = useState(Array(5).fill(0))
-  const [rollerHasRolled, setRollerHasRolled] = useState(false)
-  const [currentPlayer,   setCurrentPlayer]   = useState(0)
-  const [rollerReset,     setRollerReset]     = useState(0)
-  const [diceSelected,    setDiceSelected]    = useState(null)
-  const [myPlayerIndex,   setMyPlayerIndex]   = useState(0)
-  const [remoteDice,      setRemoteDice]      = useState(null) // dados del oponente en Dice Party
+  const [rollerDice,       setRollerDice]       = useState(Array(5).fill(0))
+  const [rollerHasRolled,  setRollerHasRolled]  = useState(false)
+  const [currentPlayer,    setCurrentPlayer]    = useState(0)
+  const [rollerReset,      setRollerReset]      = useState(0)
+  const [diceSelected,     setDiceSelected]     = useState(null)
+  const [myPlayerIndex,    setMyPlayerIndex]    = useState(0)
+  // Dados remotos del oponente (para modo espectador en Dice Party)
+  const [remoteDice,     setRemoteDice]     = useState(null)
+  // Estado de Dice Party elevado a App para sincronización online
+  const [dpGameState,    setDpGameState]    = useState(null)   // null = usa estado interno de DicePartyMode
+  const dpStateRef = useRef(null)
+  useEffect(() => { dpStateRef.current = dpGameState }, [dpGameState])
 
-  // Refs para leer estado actual dentro de callbacks sin stale closure
+  // Refs para callbacks sin stale closure
   const playersRef = useRef(players)
   const scoresRef  = useRef(scores)
   const cpRef      = useRef(currentPlayer)
-  useEffect(() => { playersRef.current = players }, [players])
-  useEffect(() => { scoresRef.current  = scores  }, [scores])
+  useEffect(() => { playersRef.current = players },       [players])
+  useEffect(() => { scoresRef.current  = scores },        [scores])
   useEffect(() => { cpRef.current      = currentPlayer }, [currentPlayer])
 
   // ── Multiplayer ──────────────────────────────────────────────────────────
   const mp = useMultiplayer({
-    // Host recibe acciones del guest y las aplica
     onRemoteAction: (action) => {
-      // diceUpdate puede venir de cualquier jugador — lo aplica quien lo reciba
+      // diceUpdate lo procesa cualquiera (espectador de dados)
       if (action.action === 'diceUpdate') {
         setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
         return
       }
-      // El resto de acciones solo las procesa el host
+      // El resto solo lo procesa el host
       if (!mpRef.current.isHost) return
+
       if (action.action === 'requestState') {
-        // Host emite estado + asigna índice al guest (siempre el 1)
-        mpRef.current.sendState({ players: playersRef.current, scores: scoresRef.current, currentPlayer: cpRef.current, mode, assignedPlayerIndex: 1 })
+        mpRef.current.sendState({
+          players: playersRef.current,
+          scores:  scoresRef.current,
+          currentPlayer: cpRef.current,
+          mode,
+          assignedPlayerIndex: 1,
+          dpGameState: dpStateRef.current,
+        })
+        return
+      }
+      if (action.action === 'dpStateUpdate') {
+        // Guest envía su estado de Dice Party al host para sincronizar
+        setDpGameState(action.state)
         return
       }
       if (action.action === 'updateScore') {
         setScores(prev => ({
           ...prev,
-          [action.pi]: { ...prev[action.pi], [action.rowId]: { ...prev[action.pi]?.[action.rowId], [action.subId]: action.value } },
+          [action.pi]: {
+            ...prev[action.pi],
+            [action.rowId]: { ...prev[action.pi]?.[action.rowId], [action.subId]: action.value },
+          },
         }))
       }
       if (action.action === 'nextPlayer') {
         setCurrentPlayer(prev => (prev + 1) % playersRef.current.length)
+        setRemoteDice(null)
       }
       if (action.action === 'reset') {
         setScores(emptyScores(playersRef.current))
       }
-      if (action.action === 'diceUpdate') {
-        // Host recibe dados del guest → los guarda para mostrar + los reenvía al guest como estado
-        const rd = { dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft }
-        setRemoteDice(rd)
-        // Host reenvía al guest para que él también vea la confirmación (loop de sync)
-        // NO hace falta porque el guest YA tiene sus propios dados localmente
-      }
     },
-    // Guest recibe el estado completo del host y lo aplica
     onRemoteState: (state) => {
-      if (state.players !== undefined)       setPlayers(state.players)
-      if (state.scores  !== undefined)       setScores(state.scores)
+      if (state.players       !== undefined) setPlayers(state.players)
+      if (state.scores        !== undefined) setScores(state.scores)
       if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
-      if (state.mode    !== undefined)       setMode(state.mode)
-      // El host nos asigna nuestro índice de jugador
+      if (state.mode          !== undefined) setMode(state.mode)
       if (state.assignedPlayerIndex !== undefined) setMyPlayerIndex(state.assignedPlayerIndex)
+      if (state.dpGameState   !== undefined) setDpGameState(state.dpGameState)
     },
   })
 
-  // Al conectarse como host, nos asignamos el índice 0
-  // Al conectarse como guest, el host nos asignará el índice 1
-  useEffect(() => {
-    if (mp.isConnected) {
-      setMyPlayerIndex(mp.isHost ? 0 : 1)
-    }
-  }, [mp.isConnected, mp.isHost])
-
-  // Host: emite estado completo a guest en cada cambio relevante
   const mpRef = useRef(mp)
   useEffect(() => { mpRef.current = mp }, [mp])
 
   useEffect(() => {
+    if (mp.isConnected) setMyPlayerIndex(mp.isHost ? 0 : 1)
+  }, [mp.isConnected, mp.isHost])
+
+  // Host emite estado completo en cada cambio
+  useEffect(() => {
     if (mpRef.current.isConnected && mpRef.current.isHost) {
-      mpRef.current.sendState({ players, scores, currentPlayer, mode })
+      mpRef.current.sendState({ players, scores, currentPlayer, mode, dpGameState })
     }
-  }, [players, scores, currentPlayer, mode])
-
-  // Host también re-emite cuando recibe un diceUpdate del guest
-  // para que ambos vean los dados en tiempo real
-  // (el guest emite sus dados via sendAction, el host los reenvía en el estado)
-
+  }, [players, scores, currentPlayer, mode, dpGameState])
 
   useEffect(() => { saveState(players, scores) }, [players, scores])
   useEffect(() => { saveMode(mode) }, [mode])
-  useEffect(() => {
-    saveTheme(themeName)
-    document.body.style.background = theme.bodyBg
-  }, [themeName, theme.bodyBg])
+  useEffect(() => { saveTheme(themeName); document.body.style.background = theme.bodyBg }, [themeName])
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function updateScore(pi, rowId, sub, val) {
-    // Si somos guest en modo online, enviamos la acción al host en lugar de aplicar localmente
     if (mp.isConnected && !mp.isHost) {
       mp.sendAction({ action: 'updateScore', pi, rowId, subId: sub, value: val })
       return
@@ -134,6 +134,15 @@ export default function App() {
       ...prev,
       [pi]: { ...prev[pi], [rowId]: { ...prev[pi][rowId], [sub]: val } },
     }))
+  }
+
+  function advanceTurn() {
+    if (mp.isConnected && !mp.isHost) {
+      mp.sendAction({ action: 'nextPlayer' })
+    } else {
+      setCurrentPlayer(prev => (prev + 1) % players.length)
+      setRemoteDice(null)
+    }
   }
 
   function savePlayers(names) {
@@ -153,15 +162,14 @@ export default function App() {
     setShowResetModal(false)
   }
 
-  function toggleTheme() {
-    setThemeName(t => t === 'dark' ? 'light' : 'dark')
-  }
+  function toggleTheme() { setThemeName(t => t === 'dark' ? 'light' : 'dark') }
 
-  // ── Componentes de header compartidos ────────────────────────────────────
+  // ── Shared header components ──────────────────────────────────────────────
 
   function ModeToggle() {
     return (
-      <div className="flex rounded-2xl p-1 gap-1" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+      <div className="flex rounded-2xl p-1 gap-1"
+        style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
         {[
           { id: 'dados',      label: '🃏 Dados'      },
           { id: 'dice-party', label: '🎲 Dice Party' },
@@ -174,20 +182,6 @@ export default function App() {
             {m.label}
           </button>
         ))}
-      </div>
-    )
-  }
-
-  function HeaderButtons({ extra }) {
-    return (
-      <div className="flex gap-1.5 items-center">
-        {extra}
-        {/* Toggle tema */}
-        <button onClick={toggleTheme}
-          className="px-2.5 py-1.5 rounded-lg text-sm transition"
-          style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.text }}>
-          {isDark ? '☀️' : '🌙'}
-        </button>
       </div>
     )
   }
@@ -205,6 +199,20 @@ export default function App() {
           myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
           remoteDice={remoteDice}
           onOpenMultiplayer={() => setShowMultiplayer(true)}
+          // Cuando Dice Party cambia el turno, lo sube al App para sincronizar
+          onAdvanceTurn={advanceTurn}
+          // Estado online de Dice Party (sincronizado entre host y guest)
+          onlineDpState={mp.isConnected ? dpGameState : null}
+          onDpStateChange={mp.isConnected ? (newState) => {
+            setDpGameState(newState)
+            // El host también lo emite al guest inmediatamente
+            if (mpRef.current.isHost) {
+              mpRef.current.sendState({ players, scores, currentPlayer, mode, dpGameState: newState })
+            } else {
+              // El guest lo envía al host
+              mpRef.current.sendAction({ action: 'dpStateUpdate', state: newState })
+            }
+          } : null}
         />
         {showMultiplayer && (
           <MultiplayerModal
@@ -229,23 +237,17 @@ export default function App() {
     <div className="app-shell select-none" style={{ background: theme.appBg, color: theme.text }}>
       <header className="shrink-0 backdrop-blur border-b px-3 pt-2 pb-2 flex flex-col gap-2"
         style={{ background: theme.headerBg, borderColor: theme.borderSubtle }}>
-
-        {/* Fila 1: logo a la izq, toggle centrado */}
         <div className="flex items-center">
           <span className="text-xl w-8">🎲</span>
-          <div className="flex-1 flex justify-center">
-            <ModeToggle />
-          </div>
-          <div className="w-8" /> {/* espacio para equilibrar el logo */}
+          <div className="flex-1 flex justify-center"><ModeToggle /></div>
+          <div className="w-8" />
         </div>
-
-        {/* Fila 2: acciones distribuidas uniformemente */}
         <div className="flex items-center justify-between gap-1">
           {[
-            { label: '🎲', title: 'Dados', active: showDiceRoller, onClick: () => setShowDiceRoller(v => !v), activeColor: '#f59e0b' },
+            { label: '🎲', title: 'Dados',     active: showDiceRoller,  onClick: () => setShowDiceRoller(v => !v), activeColor: '#f59e0b' },
             { label: mp.isConnected ? '🌐 ●' : '🌐', title: 'Online', active: mp.isConnected, onClick: () => setShowMultiplayer(true), activeColor: '#22c55e' },
             { label: '👥', title: 'Jugadores', active: false, onClick: () => setShowPlayersModal(true) },
-            { label: '🔄', title: 'Reset',     active: false, onClick: () => setShowResetModal(true),   danger: true },
+            { label: '🔄', title: 'Reset',     active: false, onClick: () => setShowResetModal(true), danger: true },
             { label: isDark ? '☀️' : '🌙', title: 'Tema', active: false, onClick: toggleTheme },
           ].map(btn => (
             <button key={btn.title} onClick={btn.onClick}
@@ -284,32 +286,13 @@ export default function App() {
           onSelectionChange={setDiceSelected}
           onPlay={(pi, rowId, subId, value) => {
             updateScore(pi, rowId, subId, String(value))
-            if (mp.isConnected && !mp.isHost) {
-              mp.sendAction({ action: 'nextPlayer' })
-            } else {
-              setCurrentPlayer(prev => (prev + 1) % players.length)
-            }
+            advanceTurn()
             setRollerReset(r => r + 1)
             setDiceSelected(null)
           }}
         />
-        {showMultiplayer && (
-        <MultiplayerModal
-          mp={mp}
-          isDark={isDark}
-          players={players}
-          onConfirmPlayer={(index, name) => {
-            setMyPlayerIndex(index)
-            // Renombra al jugador en el tablero con el nombre elegido
-            const newPlayers = [...players]
-            newPlayers[index] = name
-            setPlayers(newPlayers)
-          }}
-          onClose={() => setShowMultiplayer(false)}
-        />
-      )}
 
-      {showDiceRoller && (
+        {showDiceRoller && (
           <div className="shrink-0 safe-bottom">
             <DiceRoller
               theme={theme}
@@ -317,18 +300,11 @@ export default function App() {
               resetKey={rollerReset}
               canPlay={!!diceSelected}
               isMyTurn={!mp.isConnected || myPlayerIndex === currentPlayer}
-              onDiceChange={(dice, hasRolled) => {
-                setRollerDice(dice)
-                setRollerHasRolled(hasRolled)
-              }}
+              onDiceChange={(dice, hasRolled) => { setRollerDice(dice); setRollerHasRolled(hasRolled) }}
               onPlay={() => {
                 if (!diceSelected) return
                 updateScore(diceSelected.pi, diceSelected.rowId, diceSelected.subId, String(diceSelected.value))
-                if (mp.isConnected && !mp.isHost) {
-                  mp.sendAction({ action: 'nextPlayer' })
-                } else {
-                  setCurrentPlayer(prev => (prev + 1) % players.length)
-                }
+                advanceTurn()
                 setRollerReset(r => r + 1)
                 setDiceSelected(null)
               }}
@@ -336,6 +312,21 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {showMultiplayer && (
+        <MultiplayerModal
+          mp={mp}
+          isDark={isDark}
+          players={players}
+          onConfirmPlayer={(index, name) => {
+            setMyPlayerIndex(index)
+            const newPlayers = [...players]
+            newPlayers[index] = name
+            setPlayers(newPlayers)
+          }}
+          onClose={() => setShowMultiplayer(false)}
+        />
+      )}
     </div>
   )
 }
