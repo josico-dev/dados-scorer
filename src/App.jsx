@@ -37,6 +37,7 @@ export default function App() {
   const [rollerReset,     setRollerReset]     = useState(0)
   const [diceSelected,    setDiceSelected]    = useState(null)
   const [myPlayerIndex,   setMyPlayerIndex]   = useState(0)
+  const [remoteDice,      setRemoteDice]      = useState(null) // dados del oponente en Dice Party
 
   // Refs para leer estado actual dentro de callbacks sin stale closure
   const playersRef = useRef(players)
@@ -67,6 +68,13 @@ export default function App() {
       }
       if (action.action === 'reset') {
         setScores(emptyScores(playersRef.current))
+      }
+      if (action.action === 'diceUpdate') {
+        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
+      }
+      if (action.action === 'nextPlayer') {
+        // Al cambiar turno, limpiar los dados remotos
+        setRemoteDice(null)
       }
     },
     // Guest recibe el estado completo del host y lo aplica
@@ -184,6 +192,7 @@ export default function App() {
           onToggleTheme={toggleTheme}
           mp={mp}
           myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
+          remoteDice={remoteDice}
           onOpenMultiplayer={() => setShowMultiplayer(true)}
         />
         {showMultiplayer && (
@@ -296,6 +305,7 @@ export default function App() {
               isDark={isDark}
               resetKey={rollerReset}
               canPlay={!!diceSelected}
+              isMyTurn={!mp.isConnected || myPlayerIndex === currentPlayer}
               onDiceChange={(dice, hasRolled) => {
                 setRollerDice(dice)
                 setRollerHasRolled(hasRolled)

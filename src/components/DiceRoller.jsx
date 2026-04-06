@@ -65,7 +65,7 @@ function NormalDie({ value, locked, rolling, onClick }) {
   )
 }
 
-export default function DiceRoller({ theme, isDark, onDiceChange, resetKey, onPlay, canPlay }) {
+export default function DiceRoller({ theme, isDark, onDiceChange, resetKey, onPlay, canPlay, isMyTurn = true }) {
   const [dice,      setDice]      = useState(Array(NUM_DICE).fill(0))
   const [locked,    setLocked]    = useState(Array(NUM_DICE).fill(false))
   const [rolling,   setRolling]   = useState(false)
@@ -126,10 +126,10 @@ export default function DiceRoller({ theme, isDark, onDiceChange, resetKey, onPl
 
       {/* Botones + contador */}
       <div className="flex gap-2 items-center">
-        <button onClick={handleRoll} disabled={rolling || rollsLeft <= 0}
+        <button onClick={handleRoll} disabled={rolling || rollsLeft <= 0 || !isMyTurn}
           className="flex-1 py-2.5 rounded-xl font-bold text-sm transition disabled:opacity-40"
           style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
-          🎲 Lanzar
+          {isMyTurn ? '🎲 Lanzar' : '⏳ Esperando...'}
         </button>
         {onPlay !== undefined && (
           <button onClick={onPlay} disabled={!canPlay}

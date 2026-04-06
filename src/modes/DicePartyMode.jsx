@@ -68,19 +68,37 @@ const DEFAULT_DP_PLAYERS = ['Jugador 1', 'Jugador 2']
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer, myPlayerIndex }) {
+export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme, mp, onOpenMultiplayer, myPlayerIndex, remoteDice }) {
   const t = theme ?? { appBg: 'linear-gradient(135deg,#0d0221,#060d1f)', headerBg: 'rgba(10,8,30,0.85)', scorecardBg: 'rgba(15,12,40,0.85)', scorecardBorder: 'rgba(99,102,241,0.2)', text: '#f1f5f9', textMuted: 'rgba(255,255,255,0.4)', textFaint: 'rgba(255,255,255,0.2)', rowEven: 'rgba(255,255,255,0.03)', rowOdd: 'transparent', sectionBg: 'rgba(0,0,0,0.3)', borderSubtle: 'rgba(255,255,255,0.08)' }
-  const [gs, setGs]           = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
-  const [rolling, setRolling] = useState(false)
-  const [showReset, setShowReset]     = useState(false)
+  const [gs, setGs]               = useState(() => loadDPState() ?? initialState(DEFAULT_DP_PLAYERS))
+  const [rolling, setRolling]     = useState(false)
+  const [showReset, setShowReset] = useState(false)
   const [showPlayers, setShowPlayers] = useState(false)
+  // Dados del oponente (para modo espectador)
+  const [opponentDice, setOpponentDice] = useState(null)
 
   useEffect(() => { saveDPState(gs) }, [gs])
 
+  // Sincronizar dados al lanzar (si estamos online)
+  useEffect(() => {
+    if (mp?.isConnected && gs.hasRolled) {
+      mp.sendAction({ action: 'diceUpdate', dice: gs.dice, locked: gs.locked, rollsLeft: gs.rollsLeft })
+    }
+  }, [gs.dice, gs.hasRolled])
+
+  // Recibir dados del oponente (acción especial en DiceParty)
+  // Se gestiona desde App vía onRemoteAction, pero también podemos escuchar aquí
+  // usando un prop que App nos pase con los dados remotos
+
+
   // ── Acciones de turno ─────────────────────────────────────────────────
+
+  const isMyTurnOnline = !mp?.isConnected || myPlayerIndex === null || myPlayerIndex === gs.currentPlayer
 
   const handleRoll = useCallback(() => {
     if (rolling || gs.rollsLeft <= 0 || gs.phase !== 'playing') return
+    // Online: solo puedes lanzar en tu turno
+    if (!isMyTurnOnline) return
     setRolling(true)
     setTimeout(() => {
       setGs(prev => {
@@ -253,21 +271,39 @@ export default function DicePartyMode({ modeToggle, theme, isDark, onToggleTheme
             </div>
           )}
 
-          {/* Dados */}
-          <div className="flex justify-center gap-2">
-            {dice.map((val, i) => (
-              <Die key={i} index={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
-            ))}
-          </div>
+          {/* Dados — propios o del oponente según el turno */}
+          {!isMyTurnOnline && remoteDice ? (
+            // Modo espectador: vemos los dados del oponente (no interactivos)
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold" style={{ color: t.textMuted }}>
+                👁 Dados de {players[currentPlayer]}
+              </span>
+              <div className="flex justify-center gap-2">
+                {remoteDice.dice.map((val, i) => (
+                  <Die key={i} index={i} value={val} locked={remoteDice.locked[i]} rolling={false} onClick={() => {}} size={56} />
+                ))}
+              </div>
+              <span className="text-[10px]" style={{ color: t.textFaint }}>
+                {remoteDice.rollsLeft} lanzamientos restantes
+              </span>
+            </div>
+          ) : (
+            // Turno propio: dados interactivos
+            <div className="flex justify-center gap-2">
+              {dice.map((val, i) => (
+                <Die key={i} index={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
+              ))}
+            </div>
+          )}
 
-          {/* Botones */}
+          {/* Botones — solo activos en tu turno */}
           <div className="flex gap-2">
-            <button onClick={handleRoll} disabled={!canRoll}
+            <button onClick={handleRoll} disabled={!canRoll || !isMyTurnOnline}
               className="flex-1 py-3 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
               style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
-              🎲 Lanzar {rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}
+              {isMyTurnOnline ? `🎲 Lanzar ${rollsLeft < MAX_ROLLS ? `(${rollsLeft})` : ''}` : `⏳ Turno de ${players[currentPlayer]}`}
             </button>
-            <button onClick={handlePlay} disabled={!canPlay}
+            <button onClick={handlePlay} disabled={!canPlay || !isMyTurnOnline}
               className="flex-1 py-3 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
               style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
               ✅ JUGAR
