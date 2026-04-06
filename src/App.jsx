@@ -1,6 +1,6 @@
 // ─── App principal ─────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DEFAULT_PLAYERS, ROWS } from './config'
 import { loadState, saveState } from './storage'
 import { emptyScores } from './helpers'
