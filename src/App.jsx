@@ -94,15 +94,15 @@ export default function App() {
 
   function ModeToggle() {
     return (
-      <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+      <div className="flex rounded-2xl p-1 gap-1" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
         {[
           { id: 'dados',      label: '🃏 Dados'      },
           { id: 'dice-party', label: '🎲 Dice Party' },
         ].map(m => (
           <button key={m.id} onClick={() => setMode(m.id)}
-            className="px-3 py-1 rounded-lg text-xs font-black transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-black transition-all"
             style={mode === m.id
-              ? { background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff' }
+              ? { background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', boxShadow: '0 2px 12px rgba(124,58,237,0.4)' }
               : { color: theme.textMuted }}>
             {m.label}
           </button>
