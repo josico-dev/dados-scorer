@@ -96,7 +96,8 @@ export default function App() {
       }
     },
     onRemoteState: (state) => {
-      if (state.players       !== undefined) setPlayers(state.players)
+      // Solo aplicar players si el array tiene más de 1 elemento O si realmente mejora lo que tenemos
+      if (Array.isArray(state.players) && state.players.length >= 1) setPlayers(state.players)
       if (state.scores        !== undefined) setScores(state.scores)
       if (state.currentPlayer !== undefined) setCurrentPlayer(state.currentPlayer)
       if (state.mode          !== undefined) setMode(state.mode)
@@ -219,11 +220,19 @@ export default function App() {
             mp={mp}
             isDark={isDark}
             players={players}
-            onConfirmPlayer={(index, name) => {
+            onConfirmPlayer={(index, name, minCount) => {
               setMyPlayerIndex(index)
-              const newPlayers = [...players]
-              newPlayers[index] = name
-              setPlayers(newPlayers)
+              const base = players.length >= (minCount ?? 2) ? [...players] : [...DEFAULT_PLAYERS]
+              base[index] = name
+              setPlayers(base)
+              // Asegurar que scores tenga entradas para todos los jugadores
+              setScores(prev => {
+                const next = emptyScores(base)
+                base.forEach((_, i) => {
+                  if (prev[i]) ROWS.forEach(r => { next[i][r.id] = prev[i][r.id] ?? {} })
+                })
+                return next
+              })
             }}
             onClose={() => setShowMultiplayer(false)}
           />
@@ -318,11 +327,18 @@ export default function App() {
           mp={mp}
           isDark={isDark}
           players={players}
-          onConfirmPlayer={(index, name) => {
+          onConfirmPlayer={(index, name, minCount) => {
             setMyPlayerIndex(index)
-            const newPlayers = [...players]
-            newPlayers[index] = name
-            setPlayers(newPlayers)
+            const base = players.length >= (minCount ?? 2) ? [...players] : [...DEFAULT_PLAYERS]
+            base[index] = name
+            setPlayers(base)
+            setScores(prev => {
+              const next = emptyScores(base)
+              base.forEach((_, i) => {
+                if (prev[i]) ROWS.forEach(r => { next[i][r.id] = prev[i][r.id] ?? {} })
+              })
+              return next
+            })
           }}
           onClose={() => setShowMultiplayer(false)}
         />

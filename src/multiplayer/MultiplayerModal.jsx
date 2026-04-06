@@ -23,7 +23,8 @@ export default function MultiplayerModal({ onClose, mp, isDark, players, onConfi
 
   async function handleHostPickedPlayer() {
     const name = nameInput.trim() || players?.[0] || 'Jugador 1'
-    onConfirmPlayer?.(0, name)  // host = índice 0
+    // Aseguramos que haya al menos 2 jugadores (el 2º se asigna cuando el guest se une)
+    onConfirmPlayer?.(0, name, Math.max(2, players?.length ?? 2))
     setView('host-offer')
     const code = await mp.startAsHost()
     if (!code) setView('menu')
