@@ -107,14 +107,14 @@ export default function DadosBoard({
                     const key     = cellKey(pi, row.id, sub.id)
                     const isMe    = hasRolled && pi === currentPlayer
                     const hasSugg = isMe && suggested > 0
-                    const isSel   = selectedCell && cellKey(selectedCell.pi, selectedCell.rowId, selectedCell.subId) === key
+                    const isSel   = selectedCell === key
                     const alreadyPlayed = scores[pi]?.[row.id]?.[sub.id] !== ''
 
                     return (
                       <td key={`${pi}-${sub.id}`} className="px-1 py-1">
                         {hasSugg && !alreadyPlayed ? (
                           <button
-                            onClick={() => onCellClick(pi, row.id, sub.id)}
+                            onClick={() => onCellClick(pi, row.id, sub.id, suggested)}
                             className="w-full rounded-xl py-3 px-1 text-center text-sm font-bold transition-all active:scale-95"
                             style={{
                               background: isSel

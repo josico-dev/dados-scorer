@@ -173,9 +173,9 @@ export default function App() {
 
   // ── Party mode: seleccionar combo + JUGAR ─────────────────────────────
 
-  function handleComboClick(comboId, pi) {
-    if (!dice.hasRolled || pi !== game.currentPlayer) return
-    if (isOnline && pi !== myPlayerIndex) return
+  function handleComboClick(comboId) {
+    const pi = game.currentPlayer
+    if (!dice.hasRolled || !isMyTurn) return
     setSelectedCombo(prev => prev === comboId ? null : comboId)
   }
 
@@ -246,7 +246,7 @@ export default function App() {
 
   function toggleTheme() { setThemeName(t => t === 'dark' ? 'light' : 'dark') }
 
-  // En Dice Party, mostrar dados siempre
+  // En Dice Party, dados siempre visibles. En Normal, cuando showDice está activo.
   const diceVisible = isParty || showDice
 
   // Forzar combo en joker
@@ -330,9 +330,9 @@ export default function App() {
           <DadosBoard
             players={game.players} scores={game.scores}
             currentPlayer={game.currentPlayer} myPlayerIndex={isOnline ? myPlayerIndex : null} isOnline={isOnline}
-            diceValues={activeDice} hasDice={diceVisible && dice.hasRolled} selectedCell={selectedCell}
+            diceValues={activeDice} hasRolled={dice.hasRolled && isMyTurn} selectedCell={selectedCell}
             onCellClick={handleNormalCellClick}
-            onScoreChange={(pi, rowId, subId, val) => handleUpdateScore(pi, rowId, subId, val)}
+            onUpdateScore={(pi, rowId, subId, val) => handleUpdateScore(pi, rowId, subId, val)}
             theme={theme} isDark={isDark}
           />
         )}
