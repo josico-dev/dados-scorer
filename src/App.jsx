@@ -297,8 +297,8 @@ export default function App() {
           onClosePlayers={() => setShowPlayersModal(false)}
           onCloseReset={() => setShowResetModal(false)}
           onSavePlayers={savePlayers} onResetScores={resetScores}
-          diceActive={showDiceRoller && rollerHasRolled}
-          rollerDice={rollerDice}
+          diceActive={showDiceRoller && (rollerHasRolled || !!remoteDice)}
+          rollerDice={remoteDice?.dice ?? rollerDice}
           currentPlayer={currentPlayer}
           myPlayerIndex={mp.isConnected ? myPlayerIndex : null}
           isOnline={mp.isConnected}
@@ -317,7 +317,13 @@ export default function App() {
               resetKey={rollerReset}
               canPlay={!!diceSelected}
               isMyTurn={!mp.isConnected || myPlayerIndex === currentPlayer}
-              onDiceChange={(dice, hasRolled) => { setRollerDice(dice); setRollerHasRolled(hasRolled) }}
+              onDiceChange={(dice, hasRolled) => {
+                setRollerDice(dice)
+                setRollerHasRolled(hasRolled)
+                if (hasRolled && mpRef.current?.isConnected) {
+                  mpRef.current.sendAction({ action: 'diceUpdate', dice, locked: Array(5).fill(false), rollsLeft: 0 })
+                }
+              }}
               onPlay={() => {
                 if (!diceSelected) return
                 updateScore(diceSelected.pi, diceSelected.rowId, diceSelected.subId, String(diceSelected.value))
