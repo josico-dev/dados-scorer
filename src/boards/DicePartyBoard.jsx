@@ -83,10 +83,15 @@ export default function DicePartyBoard({
   const [infoCombo, setInfoCombo] = useState(null)
   const t = theme ?? {}
 
-  const upperSums    = players.map((_, pi) => calcUpperSum(scores[pi] ?? {}))
+  // Proteger contra scores en formato incorrecto (puede llegar {} durante cambio de modo)
+  const safeScores = Array.isArray(scores)
+    ? scores
+    : players.map((_, pi) => safeScores[pi] ?? {})
+
+  const upperSums    = players.map((_, pi) => calcUpperSum(safeScores[pi] ?? {}))
   const upperBonuses = upperSums.map(s => s > 62 ? 35 : 0)
 
-  const forcedCombo = jokerActive && jokerUpperId && (scores[currentPlayer]?.[jokerUpperId] ?? null) === null
+  const forcedCombo = jokerActive && jokerUpperId && (safeScores[currentPlayer]?.[jokerUpperId] ?? null) === null
     ? jokerUpperId
     : null
 
@@ -103,7 +108,7 @@ export default function DicePartyBoard({
   const textFaint   = t.textFaint ?? 'rgba(255,255,255,0.2)'
 
   function cellStyle(comboId, pi) {
-    const played      = (scores[pi]?.[comboId] ?? null) !== null
+    const played      = (safeScores[pi]?.[comboId] ?? null) !== null
     const isSelected  = selectedCombo === comboId && pi === currentPlayer
     const isForced    = forcedCombo   === comboId && pi === currentPlayer
     const isAvailable = potential?.[comboId]?.available && pi === currentPlayer && hasRolled
@@ -116,7 +121,7 @@ export default function DicePartyBoard({
   }
 
   function cellContent(comboId, pi) {
-    const val = scores[pi]?.[comboId] ?? null
+    const val = safeScores[pi]?.[comboId] ?? null
     if (val !== null) return val
     if (potential?.[comboId]?.available && pi === currentPlayer && hasRolled)
       return <span className="text-[11px]">{potential[comboId].score}</span>
@@ -240,7 +245,7 @@ export default function DicePartyBoard({
           <div className="pl-3 py-3 text-xs font-bold uppercase tracking-wider self-center" style={{ color: textMuted }}>Total</div>
           {players.map((_, pi) => {
             const { calcTotal } = require('../diceParty/scoring')
-            const total = calcTotal(scores[pi] ?? {}, jokerBonuses?.[pi] ?? 0)
+            const total = calcTotal(safeScores[pi] ?? {}, jokerBonuses?.[pi] ?? 0)
             return (
               <div key={pi} className="flex items-center justify-center py-2">
                 <span className="text-xl font-black tabular-nums" style={{ color: total > 0 ? '#a78bfa' : textFaint }}>

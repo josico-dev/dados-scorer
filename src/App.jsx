@@ -129,6 +129,8 @@ export default function App() {
   const isParty     = mode === 'dice-party'
   const hasDice     = showDice && dice.hasRolled
   const activeDice  = isMyTurn ? dice.dice : (remoteDice?.dice ?? dice.dice)
+  // Score del jugador actual (puede ser array o objeto según el modo)
+  const currentScores = (Array.isArray(game.scores) ? game.scores[game.currentPlayer] : game.scores[game.currentPlayer]) ?? {}
 
   // ── Acciones ─────────────────────────────────────────────────────────────
 
@@ -179,7 +181,7 @@ export default function App() {
 
   function handlePartyPlay() {
     if (!selectedCombo || !dice.hasRolled) return
-    const playerScores = game.scores[game.currentPlayer] ?? {}
+    const playerScores = currentScores
     const potential = calcPotentialFn(dice.dice, playerScores, jokerActive, jokerUpperId)
     const entry = potential[selectedCombo]
     if (!entry?.available) return
@@ -204,7 +206,7 @@ export default function App() {
   // Detectar joker en Dice Party al lanzar
   useEffect(() => {
     if (isParty && dice.hasRolled && game.scores?.[game.currentPlayer]) {
-      const { jokerActive: ja, jokerUpperId: ju } = detectJoker(dice.dice, game.scores[game.currentPlayer] ?? {})
+      const { jokerActive: ja, jokerUpperId: ju } = detectJoker(dice.dice, currentScores)
       setJokerActive(ja)
       setJokerUpperId(ju)
     } else {
@@ -248,7 +250,7 @@ export default function App() {
   const diceVisible = isParty || showDice
 
   // Forzar combo en joker
-  const forcedCombo = jokerActive && jokerUpperId && (game.scores[game.currentPlayer] ?? {})[jokerUpperId] === null
+  const forcedCombo = jokerActive && jokerUpperId && (currentScores)[jokerUpperId] === null
     ? jokerUpperId : null
 
   // ── Render ────────────────────────────────────────────────────────────
