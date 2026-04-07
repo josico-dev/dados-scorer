@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import { FACE_COLORS } from '../diceParty/Die'
 import { UPPER_COMBOS, LOWER_COMBOS } from '../diceParty/combinations'
-import { calcUpperSum } from '../diceParty/scoring'
+import { calcPotential, calcUpperSum, calcTotal } from '../diceParty/scoring'
 
 // ── Mini dado (pip display) ────────────────────────────────────────────────
 
@@ -86,7 +86,13 @@ export default function DicePartyBoard({
   // Proteger contra scores en formato incorrecto (puede llegar {} durante cambio de modo)
   const safeScores = Array.isArray(scores)
     ? scores
-    : players.map((_, pi) => safeScores[pi] ?? {})
+    : players.map((_, pi) => (scores?.[pi] ?? {}))
+
+  // Calcular potential internamente si no viene como prop
+  const computedPotential = (hasRolled && safeScores[currentPlayer])
+    ? calcPotential(diceValues, safeScores[currentPlayer], jokerActive, jokerUpperId)
+    : null
+  const activePotential = potential ?? computedPotential
 
   const upperSums    = players.map((_, pi) => calcUpperSum(safeScores[pi] ?? {}))
   const upperBonuses = upperSums.map(s => s > 62 ? 35 : 0)
@@ -111,7 +117,7 @@ export default function DicePartyBoard({
     const played      = (safeScores[pi]?.[comboId] ?? null) !== null
     const isSelected  = selectedCombo === comboId && pi === currentPlayer
     const isForced    = forcedCombo   === comboId && pi === currentPlayer
-    const isAvailable = potential?.[comboId]?.available && pi === currentPlayer && hasRolled
+    const isAvailable = activePotential?.[comboId]?.available && pi === currentPlayer && hasRolled
 
     if (isForced)    return { background: 'rgba(245,158,11,0.25)', border: '1px solid #f59e0b',   color: '#fde68a', cursor: 'pointer', fontWeight: 'bold' }
     if (isSelected)  return { background: 'rgba(34,197,94,0.2)',   border: '1px solid #22c55e',   color: '#86efac', cursor: 'pointer', fontWeight: 'bold' }
@@ -123,8 +129,8 @@ export default function DicePartyBoard({
   function cellContent(comboId, pi) {
     const val = safeScores[pi]?.[comboId] ?? null
     if (val !== null) return val
-    if (potential?.[comboId]?.available && pi === currentPlayer && hasRolled)
-      return <span className="text-[11px]">{potential[comboId].score}</span>
+    if (activePotential?.[comboId]?.available && pi === currentPlayer && hasRolled)
+      return <span className="text-[11px]">{activePotential[comboId].score}</span>
     return '—'
   }
 
@@ -244,7 +250,6 @@ export default function DicePartyBoard({
         <div className="grid" style={{ gridTemplateColumns: gridCols, background: bonusBg, borderTop: '2px solid rgba(167,139,250,0.3)' }}>
           <div className="pl-3 py-3 text-xs font-bold uppercase tracking-wider self-center" style={{ color: textMuted }}>Total</div>
           {players.map((_, pi) => {
-            const { calcTotal } = require('../diceParty/scoring')
             const total = calcTotal(safeScores[pi] ?? {}, jokerBonuses?.[pi] ?? 0)
             return (
               <div key={pi} className="flex items-center justify-center py-2">
