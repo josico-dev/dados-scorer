@@ -1,105 +1,65 @@
-// ─── Hook compartido de estado de juego ───────────────────────────────────
-//
-// Gestiona: jugadores, puntuaciones, turno actual.
-// Ambos modos (Dados y DiceParty) usan este hook; el schema de scores
-// varía por modo (lo inicializa el modo correspondiente).
+// ─── Hook de estado del juego — compartido por ambos modos ────────────────
 
-import { useState, useCallback, useRef } from 'react'
-import { DEFAULT_PLAYERS, ROWS, SUBTYPES } from '../config'
+import { useState, useRef, useEffect } from 'react'
 
-// ── Helpers de scores vacíos ──────────────────────────────────────────────
+const KEY = 'dados-scorer-v4'
 
-export function emptyDadosScores(players) {
-  const scores = {}
-  players.forEach((_, i) => {
-    scores[i] = {}
-    ROWS.forEach(row => {
-      scores[i][row.id] = {}
-      SUBTYPES.forEach(sub => {
-        scores[i][row.id][sub.id] = ''
-      })
-    })
-  })
-  return scores
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (!raw) return null
+    const d = JSON.parse(raw)
+    if (!Array.isArray(d?.players) || !d?.scores) return null
+    return d
+  } catch { try { localStorage.removeItem(KEY) } catch {}; return null }
 }
 
-export function emptyPartyScores(players) {
-  // Importamos ALL_COMBOS dinámicamente para no crear dependencia circular
-  // Se pasa como parámetro en lugar de importar
-  return players.map(() => ({}))
+function save(state) {
+  try { localStorage.setItem(KEY, JSON.stringify(state)) } catch {}
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────
-
-export function useGameState() {
-  const saved = loadState()
-
-  const [players, setPlayers]           = useState(saved?.players ?? DEFAULT_PLAYERS)
-  const [scores, setScores]             = useState(saved?.scores  ?? emptyDadosScores(saved?.players ?? DEFAULT_PLAYERS))
+export function useGameState(defaultPlayers) {
+  const saved = load()
+  const [players,       setPlayers]       = useState(saved?.players ?? defaultPlayers)
+  const [scores,        setScores]        = useState(saved?.scores ?? {})
   const [currentPlayer, setCurrentPlayer] = useState(saved?.currentPlayer ?? 0)
+  const [turn,          setTurn]          = useState(saved?.turn ?? 0)
+  const [extra,         setExtra]         = useState(saved?.extra ?? {})
 
-  // Ref para acceso sin stale en callbacks
-  const stateRef = useRef({ players, scores, currentPlayer })
-  stateRef.current = { players, scores, currentPlayer }
+  const stateRef = useRef({})
+  stateRef.current = { players, scores, currentPlayer, turn, extra }
 
-  // Persistir en cada cambio
-  const persist = useCallback((p, s, cp) => {
-    saveState(p, s, cp)
-  }, [])
+  useEffect(() => { save({ players, scores, currentPlayer, turn, extra }) }, [players, scores, currentPlayer, turn, extra])
 
-  const updatePlayers = useCallback((newPlayers, newScores) => {
-    setPlayers(newPlayers)
-    setScores(newScores)
-    persist(newPlayers, newScores, 0)
-  }, [persist])
+  function updateScore(pi, key, subKey, value) {
+    setScores(prev => ({
+      ...prev,
+      [pi]: subKey != null
+        ? { ...prev[pi], [key]: { ...(prev[pi]?.[key] ?? {}), [subKey]: value } }
+        : { ...prev[pi], [key]: value },
+    }))
+  }
 
-  const updateScore = useCallback((pi, rowId, subId, value) => {
-    setScores(prev => {
-      const next = {
-        ...prev,
-        [pi]: { ...prev[pi], [rowId]: { ...prev[pi]?.[rowId], [subId]: value } },
-      }
-      persist(stateRef.current.players, next, stateRef.current.currentPlayer)
-      return next
-    })
-  }, [persist])
+  function advanceTurn() {
+    setCurrentPlayer(prev => (prev + 1) % stateRef.current.players.length)
+    setTurn(prev => prev + 1)
+  }
 
-  const replaceScores = useCallback((newScores) => {
-    setScores(newScores)
-    persist(stateRef.current.players, newScores, stateRef.current.currentPlayer)
-  }, [persist])
-
-  const advanceTurn = useCallback(() => {
-    setCurrentPlayer(prev => {
-      const next = (prev + 1) % stateRef.current.players.length
-      persist(stateRef.current.players, stateRef.current.scores, next)
-      return next
-    })
-  }, [persist])
-
-  const resetScores = useCallback((emptyFn) => {
-    const empty = emptyFn ? emptyFn(stateRef.current.players) : emptyDadosScores(stateRef.current.players)
-    setScores(empty)
+  function resetGame(newPlayers, newScores, newExtra) {
+    setPlayers(newPlayers ?? stateRef.current.players)
+    setScores(newScores ?? {})
     setCurrentPlayer(0)
-    persist(stateRef.current.players, empty, 0)
-  }, [persist])
-
-  // Sobrescribir estado completo (usado por online)
-  const applyRemoteState = useCallback((state) => {
-    if (Array.isArray(state.players))     setPlayers(state.players)
-    if (state.scores != null)             setScores(state.scores)
-    if (state.currentPlayer != null)      setCurrentPlayer(state.currentPlayer)
-  }, [])
+    setTurn(0)
+    setExtra(newExtra ?? {})
+  }
 
   return {
-    players, scores, currentPlayer,
+    players, setPlayers,
+    scores, setScores, updateScore,
+    currentPlayer, setCurrentPlayer,
+    turn, setTurn,
+    extra, setExtra,
+    advanceTurn, resetGame,
     stateRef,
-    updatePlayers,
-    updateScore,
-    replaceScores,
-    advanceTurn,
-    resetScores,
-    applyRemoteState,
-    setCurrentPlayer,
   }
 }

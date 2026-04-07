@@ -1,46 +1,68 @@
-// ─── Tablero modo Normal ───────────────────────────────────────────────────
-// Solo renderiza. Recibe datos y emite clicks. Sin estado propio.
+// ─── Tablero modo normal (Dados) ──────────────────────────────────────────
+//
+// Props:
+//   players, scores, theme, isDark
+//   diceValues       — array de 5 valores actuales (0 = sin lanzar)
+//   hasRolled        — bool: se han lanzado dados
+//   currentPlayer    — índice del jugador activo
+//   myPlayerIndex    — índice propio (null si offline)
+//   isOnline         — bool
+//   selectedCell     — { pi, rowId, subId } | null
+//   onCellClick(pi, rowId, subId)
+//   onUpdateScore(pi, rowId, subId, value)  — para edición manual
 
 import { ROWS, SUBTYPES } from '../config'
 import { DICE_ICONS } from '../DiceIcons'
 import ScoreCell from '../ScoreCell'
-import { countDiceForFace } from '../dice/faces'
 
-function playerTotal(scores, pi) {
-  return ROWS.reduce((total, row) => {
-    const opc = parseFloat(scores[pi]?.[row.id]?.Opc) || 0
-    const obl = parseFloat(scores[pi]?.[row.id]?.Obl) || 0
-    return total + (opc + obl) * row.value
-  }, 0)
+const ROW_DICE_VALUE = { as: 6, k: 5, q: 4, j: 3, vi: 2, v: 1 }
+
+// AS (valor 6) es comodín — cuenta para cualquier fila excepto AS
+function suggestDice(rowId, diceValues) {
+  const faceNum  = ROW_DICE_VALUE[rowId]
+  const AS_VALUE = 6
+  return diceValues.filter(d =>
+    d === faceNum || (d === AS_VALUE && rowId !== 'as')
+  ).length
 }
 
+function cellKey(pi, rowId, subId) { return `${pi}-${rowId}-${subId}` }
+
 export default function DadosBoard({
-  players, scores, currentPlayer, myPlayerIndex, isOnline,
-  diceValues, hasDice, selectedCell,
-  onCellClick, onScoreChange,
   theme, isDark,
+  players, scores,
+  diceValues, hasRolled,
+  currentPlayer, myPlayerIndex, isOnline,
+  selectedCell,
+  onCellClick,
+  onUpdateScore,
 }) {
   const t = theme ?? {}
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto safe-bottom">
-      <table className="border-separate border-spacing-0 w-full"
-        style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px` }}>
+      <table
+        className="border-separate border-spacing-0 w-full"
+        style={{ minWidth: `${Math.max(320, 80 + players.length * 120)}px` }}
+      >
         <thead>
           <tr>
-            <th className="sticky left-0 z-20 w-12 min-w-[48px]" style={{ background: t.headerBg ?? '#0a081e' }} />
+            <th className="sticky left-0 z-20 w-12 min-w-[48px]"
+              style={{ background: t.headerBg ?? '#0a081e' }} />
             {players.map((name, i) => {
-              const isMe = isOnline && i === myPlayerIndex
-              const isTurn = i === currentPlayer
+              const isMe     = isOnline && i === myPlayerIndex
+              const isMyTurn = i === currentPlayer
               return (
                 <th key={i} colSpan={2} className="text-center px-1 pt-2 pb-1">
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="block text-xs font-bold uppercase tracking-wider truncate max-w-[120px]"
-                      style={{ color: isTurn ? '#f59e0b' : '#a78bfa' }}>
-                      {name}{isTurn ? ' ▶' : ''}
+                      style={{ color: isMyTurn ? '#f59e0b' : '#a78bfa' }}>
+                      {name}{isMyTurn ? ' ▶' : ''}
                     </span>
-                    {isMe && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>TÚ</span>}
+                    {isMe && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>TÚ</span>
+                    )}
                   </div>
                 </th>
               )
@@ -48,7 +70,9 @@ export default function DadosBoard({
           </tr>
           <tr>
             <th className="sticky left-0 z-20 text-center px-2 py-1 text-[10px] font-medium uppercase w-12 min-w-[48px]"
-              style={{ background: t.headerBg ?? '#0a081e', color: t.textMuted }}>Cara</th>
+              style={{ background: t.headerBg ?? '#0a081e', color: t.textMuted }}>
+              Cara
+            </th>
             {players.map((_, pi) =>
               SUBTYPES.map(sub => (
                 <th key={`${pi}-${sub.id}`}
@@ -60,15 +84,18 @@ export default function DadosBoard({
             )}
           </tr>
         </thead>
+
         <tbody>
-          {ROWS.map((row, ri) => {
-            const suggested = hasDice ? countDiceForFace(row.id, diceValues) : 0
-            const sugPts = suggested * row.value
+          {ROWS.map((row, rowIndex) => {
+            const suggested    = hasRolled ? suggestDice(row.id, diceValues) : 0
+            const suggestedPts = suggested * row.value
 
             return (
-              <tr key={row.id} style={{ background: ri % 2 === 0 ? t.rowEven : t.rowOdd }}>
+              <tr key={row.id} style={{ background: rowIndex % 2 === 0 ? t.rowEven : t.rowOdd }}>
                 <td className="sticky left-0 z-10 px-1 py-0.5 whitespace-nowrap"
-                  style={{ background: ri % 2 === 0 ? (isDark ? '#12102a' : '#eef0fa') : (isDark ? '#0d0b22' : '#f5f7ff') }}>
+                  style={{ background: rowIndex % 2 === 0
+                    ? (isDark ? '#12102a' : '#eef0fa')
+                    : (isDark ? '#0d0b22' : '#f5f7ff') }}>
                   <div className="flex flex-col items-center">
                     <div className="scale-[0.65] origin-center -my-1">{DICE_ICONS[row.id]}</div>
                     <span className="text-[9px] font-medium" style={{ color: t.textFaint }}>({row.value})</span>
@@ -77,29 +104,36 @@ export default function DadosBoard({
 
                 {players.map((_, pi) =>
                   SUBTYPES.map(sub => {
-                    const cellId = `${pi}-${row.id}-${sub.id}`
-                    const canSuggest = hasDice && pi === currentPlayer && suggested > 0
-                    const isSel = selectedCell === cellId
+                    const key     = cellKey(pi, row.id, sub.id)
+                    const isMe    = hasRolled && pi === currentPlayer
+                    const hasSugg = isMe && suggested > 0
+                    const isSel   = selectedCell && cellKey(selectedCell.pi, selectedCell.rowId, selectedCell.subId) === key
+                    const alreadyPlayed = scores[pi]?.[row.id]?.[sub.id] !== ''
 
                     return (
-                      <td key={cellId} className="px-1 py-1">
-                        {canSuggest ? (
+                      <td key={`${pi}-${sub.id}`} className="px-1 py-1">
+                        {hasSugg && !alreadyPlayed ? (
                           <button
-                            onClick={() => onCellClick?.(pi, row.id, sub.id, suggested)}
+                            onClick={() => onCellClick(pi, row.id, sub.id)}
                             className="w-full rounded-xl py-3 px-1 text-center text-sm font-bold transition-all active:scale-95"
                             style={{
-                              background: isSel ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : (isDark ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.1)'),
-                              border: isSel ? '2px solid #a78bfa' : `1px solid ${isDark ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.25)'}`,
+                              background: isSel
+                                ? 'linear-gradient(135deg,#7c3aed,#4f46e5)'
+                                : (isDark ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.1)'),
+                              border: isSel
+                                ? '2px solid #a78bfa'
+                                : `1px solid ${isDark ? 'rgba(124,58,237,0.3)' : 'rgba(124,58,237,0.25)'}`,
                               color: isSel ? '#fff' : '#a78bfa',
                             }}>
-                            {sugPts}
+                            {suggestedPts}
                           </button>
                         ) : (
                           <ScoreCell
-                            theme={theme} isDark={isDark}
+                            theme={theme}
+                            isDark={isDark}
                             value={scores[pi]?.[row.id]?.[sub.id] ?? ''}
                             faceValue={row.value}
-                            onChange={val => onScoreChange?.(pi, row.id, sub.id, val)}
+                            onChange={val => onUpdateScore(pi, row.id, sub.id, val)}
                           />
                         )}
                       </td>
@@ -110,13 +144,18 @@ export default function DadosBoard({
             )
           })}
 
+          {/* Fila de totales */}
           <tr style={{ borderTop: '2px solid rgba(167,139,250,0.3)' }}>
             <td className="sticky left-0 z-10 px-2 py-2 text-center"
               style={{ background: isDark ? '#12102a' : '#e8ecf8' }}>
               <span className="text-[10px] font-bold uppercase" style={{ color: '#a78bfa' }}>Total</span>
             </td>
             {players.map((_, pi) => {
-              const total = playerTotal(scores, pi)
+              const total = ROWS.reduce((sum, row) => {
+                const opc = parseFloat(scores[pi]?.[row.id]?.Opc) || 0
+                const obl = parseFloat(scores[pi]?.[row.id]?.Obl) || 0
+                return sum + (opc + obl) * row.value
+              }, 0)
               return (
                 <td key={pi} colSpan={2} className="text-center px-1 py-2"
                   style={{ background: isDark ? '#12102a' : '#e8ecf8' }}>
