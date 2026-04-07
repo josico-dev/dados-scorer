@@ -179,7 +179,8 @@ export default function App() {
 
   function handlePartyPlay() {
     if (!selectedCombo || !dice.hasRolled) return
-    const potential = calcPotentialFn(dice.dice, game.scores[game.currentPlayer], jokerActive, jokerUpperId)
+    const playerScores = game.scores[game.currentPlayer] ?? {}
+    const potential = calcPotentialFn(dice.dice, playerScores, jokerActive, jokerUpperId)
     const entry = potential[selectedCombo]
     if (!entry?.available) return
 
@@ -202,8 +203,8 @@ export default function App() {
 
   // Detectar joker en Dice Party al lanzar
   useEffect(() => {
-    if (isParty && dice.hasRolled && game.scores[game.currentPlayer]) {
-      const { jokerActive: ja, jokerUpperId: ju } = detectJoker(dice.dice, game.scores[game.currentPlayer])
+    if (isParty && dice.hasRolled && game.scores?.[game.currentPlayer]) {
+      const { jokerActive: ja, jokerUpperId: ju } = detectJoker(dice.dice, game.scores[game.currentPlayer] ?? {})
       setJokerActive(ja)
       setJokerUpperId(ju)
     } else {
@@ -247,7 +248,7 @@ export default function App() {
   const diceVisible = isParty || showDice
 
   // Forzar combo en joker
-  const forcedCombo = jokerActive && jokerUpperId && game.scores[game.currentPlayer]?.[jokerUpperId] === null
+  const forcedCombo = jokerActive && jokerUpperId && (game.scores[game.currentPlayer] ?? {})[jokerUpperId] === null
     ? jokerUpperId : null
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -264,7 +265,17 @@ export default function App() {
           <div className="flex-1 flex justify-center">
             <div className="flex rounded-2xl p-1 gap-1" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
               {[{ id: 'dados', label: '🃏 Dados' }, { id: 'dice-party', label: '🎲 Dice Party' }].map(m => (
-                <button key={m.id} onClick={() => { setMode(m.id); dice.reset(); setSelectedCombo(null); setSelectedCell(null) }}
+                <button key={m.id} onClick={() => {
+                    if (m.id !== mode) {
+                      const empty = m.id === 'dice-party' ? emptyDPScores(game.players) : emptyNormalScores(game.players)
+                      game.setScores(empty)
+                      game.setCurrentPlayer(0)
+                      game.setTurn(0)
+                      setJokerBonuses(game.players.map(() => 0))
+                      setDpPhase('playing')
+                    }
+                    setMode(m.id); dice.reset(); setSelectedCombo(null); setSelectedCell(null)
+                  }}
                   className="px-4 py-2 rounded-xl text-sm font-black transition-all"
                   style={mode === m.id ? { background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', boxShadow: '0 2px 12px rgba(124,58,237,0.4)' } : { color: theme.textMuted }}>
                   {m.label}
