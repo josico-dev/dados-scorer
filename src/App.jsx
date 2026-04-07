@@ -176,6 +176,17 @@ export default function App() {
     }
   }, [])
 
+  // Cuando el usuario confirma su nombre en el modal online
+  function handleStartOnline({ role, name, index }) {
+    setMyPlayerIndex(index)
+    // Crear array fresco de 2 jugadores ignorando localStorage
+    const fresh = ['Jugador 1', 'Jugador 2']
+    fresh[index] = name
+    setPlayers(fresh)
+    setScores(emptyScores(fresh))
+    setCurrentPlayer(0)
+  }
+
   function savePlayers(names) {
     setPlayers(names)
     setScores(prev => {
@@ -235,15 +246,8 @@ export default function App() {
           onDiceRoll={onDiceRoll}
         />
         {showMultiplayer && (
-          <MultiplayerModal mp={mp} isDark={isDark} players={players}
-            onConfirmPlayer={(index, name) => {
-              setMyPlayerIndex(index)
-              const base = players.length >= 2 ? [...players] : [...DEFAULT_PLAYERS]
-              base[index] = name
-              setPlayers(base)
-              // Anunciar nombre al otro jugador
-              if (mp.isConnected) mp.sendAction({ action: 'registerName', index, name })
-            }}
+          <MultiplayerModal mp={mp} isDark={isDark}
+            onStartOnline={handleStartOnline}
             onClose={() => setShowMultiplayer(false)}
           />
         )}
@@ -327,14 +331,8 @@ export default function App() {
       </div>
 
       {showMultiplayer && (
-        <MultiplayerModal mp={mp} isDark={isDark} players={players}
-          onConfirmPlayer={(index, name) => {
-            setMyPlayerIndex(index)
-            const base = players.length >= 2 ? [...players] : [...DEFAULT_PLAYERS]
-            base[index] = name
-            setPlayers(base)
-            if (mp.isConnected) mp.sendAction({ action: 'registerName', index, name })
-          }}
+        <MultiplayerModal mp={mp} isDark={isDark}
+          onStartOnline={handleStartOnline}
           onClose={() => setShowMultiplayer(false)}
         />
       )}

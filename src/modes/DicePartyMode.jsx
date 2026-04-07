@@ -1,6 +1,6 @@
 // ─── Modo Dice Party (estilo Yahtzee) ──────────────────────────────────────
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Die, { FACE_COLORS } from '../diceParty/Die'
 import { UPPER_COMBOS, LOWER_COMBOS, ALL_COMBOS } from '../diceParty/combinations'
 import { calcPotential, detectJoker, calcUpperSum, calcTotal } from '../diceParty/scoring'
