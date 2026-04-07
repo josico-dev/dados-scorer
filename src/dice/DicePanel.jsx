@@ -1,44 +1,24 @@
-// ─── Panel de dados unificado ─────────────────────────────────────────────
-//
-// Modo normal:  muestra iconos SVG del scorecard (DICE_ICONS)
-// Modo party:   muestra dados con pips (Die.jsx)
-//
-// Props:
-//   diceHook     — output de useDice()
-//   mode         — 'dados' | 'dice-party'
-//   isMyTurn     — bool
-//   canPlay      — bool (hay selección confirmada)
-//   playerName   — nombre del jugador actual (para mensaje de espera)
-//   onPlay       — callback al pulsar JUGAR
-//   theme, isDark
+// ─── Panel de dados — modo Normal y Party ────────────────────────────────
 
-import Die, { FACE_COLORS } from './Die'
+import { useState, useEffect } from 'react'
+import Die from '../diceParty/Die'
 import { DICE_ICONS } from '../DiceIcons'
 import { NORMAL_VALUE_TO_ID } from './faces'
 
-// Dado modo normal usando iconos del scorecard
-function NormalDie({ value, locked, rolling, onClick, size = 52 }) {
+const MAX_ROLLS = 3
+
+// Dado del modo normal (icono del scoreboard)
+function NormalDie({ value, locked, rolling, onClick }) {
+  const [animKey, setAnimKey] = useState(0)
+  useEffect(() => { if (rolling && !locked) setAnimKey(k => k + 1) }, [rolling, locked])
   const icon = value ? DICE_ICONS[NORMAL_VALUE_TO_ID[value]] : null
   return (
-    <button
-      onClick={onClick}
-      className="relative touch-manipulation select-none focus:outline-none"
-      style={{ width: size, height: size }}
-    >
-      <div
-        className={rolling && !locked ? 'die-spinning' : ''}
-        style={{
-          width: size, height: size,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          filter: locked
-            ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)'
-            : 'none',
-          opacity: value ? 1 : 0.35,
-          transition: 'filter 0.2s, opacity 0.2s',
-          transform: 'scale(1.44)',
-          transformOrigin: 'center',
-        }}
-      >
+    <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 52, height: 52 }}>
+      <div key={animKey} className={rolling && !locked ? 'die-spinning' : ''}
+        style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          filter: locked ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)' : 'none',
+          opacity: value ? 1 : 0.35, transition: 'filter 0.2s, opacity 0.2s',
+          transform: 'scale(1.44)', transformOrigin: 'center' }}>
         {icon ?? (
           <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none">
             <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="2.5"/>
@@ -46,78 +26,70 @@ function NormalDie({ value, locked, rolling, onClick, size = 52 }) {
           </svg>
         )}
       </div>
-      {locked && (
-        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center shadow"
-          style={{ fontSize: 8, color: '#000', zIndex: 10 }}>🔒</div>
-      )}
+      {locked && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center shadow"
+        style={{ fontSize: 8, color: '#000', zIndex: 10 }}>🔒</div>}
     </button>
   )
 }
 
 export default function DicePanel({
-  diceHook,
-  mode = 'dados',
+  // Props individuales (pasados desde App)
+  dice, locked, rolling, rollsLeft, rollCount, hasRolled,
+  onRoll, onToggleLock, onPlay, canPlay,
   isMyTurn = true,
-  canPlay = false,
-  playerName = '',
-  onPlay,
-  theme,
-  isDark,
+  mode = 'party',   // 'normal' | 'party'
+  theme, isDark,
 }) {
-  const { dice, locked, rolling, rollsLeft, hasRolled, maxRolls, roll, toggleLock } = diceHook
   const t = theme ?? {}
-  const rollsDone = maxRolls - rollsLeft
-
-  const isParty = mode === 'dice-party'
+  const dieSize = 56
 
   return (
-    <div className="mx-3 mb-3 rounded-2xl p-3 flex flex-col gap-2"
-      style={{
-        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-      }}>
+    <div className="flex flex-col gap-2 safe-bottom px-3 pb-2 pt-1">
 
       {/* Dados */}
-      <div className="flex justify-center gap-2 items-center" style={{ height: isParty ? 64 : 58 }}>
-        {dice.map((val, i) =>
-          isParty
-            ? <Die key={i} index={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={56} />
-            : <NormalDie key={i} value={val} locked={locked[i]} rolling={rolling} onClick={() => toggleLock(i)} size={52} />
+      <div className="flex justify-center gap-2 items-center">
+        {(dice ?? []).map((val, i) =>
+          mode === 'normal' ? (
+            <NormalDie key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
+              onClick={() => onToggleLock?.(i)} />
+          ) : (
+            <Die key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
+              onClick={() => onToggleLock?.(i)} size={dieSize} />
+          )
         )}
       </div>
 
-      {/* Botones + contador */}
+      {/* Controles */}
       <div className="flex gap-2 items-center">
         <button
-          onClick={roll}
-          disabled={rolling || rollsLeft <= 0 || !isMyTurn}
-          className="flex-1 py-2.5 rounded-xl font-bold text-sm transition disabled:opacity-40"
+          onClick={onRoll}
+          disabled={rolling || (rollsLeft ?? 0) <= 0 || !isMyTurn}
+          className="flex-1 py-2.5 rounded-xl font-bold text-sm transition disabled:opacity-40 active:scale-95"
           style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
           {isMyTurn
-            ? `🎲 Lanzar${rollsDone > 0 ? ` (${rollsLeft})` : ''}`
-            : `⏳ ${playerName || 'Esperando...'}`}
+            ? `🎲 Lanzar${(rollCount ?? 0) > 0 ? ` (${rollsLeft})` : ''}`
+            : '⏳ Esperando...'}
         </button>
 
-        {onPlay !== undefined && (
+        {onPlay && (
           <button
             onClick={onPlay}
-            disabled={!canPlay}
+            disabled={!canPlay || !isMyTurn}
             className="flex-1 py-2.5 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
             style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
             ✅ JUGAR
           </button>
         )}
 
-        {/* Indicadores de tirada */}
+        {/* Contador 1-2-3 */}
         <div className="flex gap-1">
-          {Array.from({ length: maxRolls }, (_, n) => (
-            <div key={n}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
+          {[1, 2, 3].map(n => (
+            <div key={n} className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
               style={{
-                background: rollsDone > n ? '#f59e0b' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
-                color: rollsDone > n ? '#000' : (t.textMuted ?? 'rgba(255,255,255,0.3)'),
+                background: (rollCount ?? 0) >= n ? '#f59e0b' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+                color: (rollCount ?? 0) >= n ? '#000' : (t.textMuted ?? '#666'),
               }}>
-              {n + 1}
+              {n}
             </div>
           ))}
         </div>
