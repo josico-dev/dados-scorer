@@ -22,7 +22,7 @@ npm test            # Vitest en watch
 npm run test:run    # Vitest una sola pasada
 ```
 
-Antes de commitear, **siempre** correr `npx eslint .`, `npm run test:run` y `npm run build` — el repo no tiene CI propio, sólo el deploy de Netlify, y queremos detectar fallos antes.
+Antes de commitear, **siempre** correr `npx eslint .`, `npm run test:run` y `npm run build`. GitHub Actions (`.github/workflows/ci.yml`) los repite en cada PR y push a `main` — si fallan ahí, el check de la PR se pone rojo.
 
 ## Estructura
 
