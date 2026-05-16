@@ -58,7 +58,7 @@ export default function DicePanel({
         <button
           onClick={onRoll}
           disabled={rolling || (rollsLeft ?? 0) <= 0 || !isMyTurn}
-          className="flex-1 py-3 rounded-xl font-bold text-base transition disabled:opacity-40 active:scale-95"
+          className="flex-1 py-3.5 rounded-xl font-bold text-lg transition disabled:opacity-40 active:scale-95"
           style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
           {isMyTurn
             ? `🎲 Lanzar${(rollCount ?? 0) > 0 ? ` (${rollsLeft})` : ''}`
@@ -69,7 +69,7 @@ export default function DicePanel({
           <button
             onClick={onPlay}
             disabled={!canPlay || !isMyTurn}
-            className="flex-1 py-3 rounded-xl font-black text-base transition active:scale-95 disabled:opacity-30"
+            className="flex-1 py-3.5 rounded-xl font-black text-lg transition active:scale-95 disabled:opacity-30"
             style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
             ✅ JUGAR
           </button>
@@ -78,7 +78,7 @@ export default function DicePanel({
         {/* Contador 1-2-3 */}
         <div className="flex gap-1">
           {[1, 2, 3].map(n => (
-            <div key={n} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+            <div key={n} className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black"
               style={{
                 background: (rollCount ?? 0) >= n ? '#f59e0b' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
                 color: (rollCount ?? 0) >= n ? '#000' : (t.textMuted ?? '#666'),
