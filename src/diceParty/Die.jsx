@@ -54,8 +54,8 @@ export default function Die({ value, locked, rolling, rollKey = 0, onClick, clas
       </svg>
 
       {locked && (
-        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow-lg"
-          style={{ fontSize: 10, color: '#000' }}>🔒</div>
+        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shadow-lg"
+          style={{ fontSize: 12, color: '#000' }}>🔒</div>
       )}
     </button>
   )
