@@ -150,7 +150,6 @@ export function calcTotal(playerScores, jokerBonusCount = 0) {
  */
 export function calcPotential(dice, playerScores, jokerActive, jokerUpperId) {
   const result = {}
-  const diceSum = sumDice(dice)
 
   ALL_COMBOS.forEach(combo => {
     const alreadyPlayed = playerScores[combo.id] !== null && playerScores[combo.id] !== undefined

@@ -12,20 +12,20 @@ export default class ErrorBoundary extends Component {
     return { crashed: true, errorMsg: error?.message ?? '' }
   }
 
-  componentDidCatch(error, info) {
+  componentDidCatch(error) {
     // Si el error parece de localStorage, lo limpiamos automáticamente y recargamos
     const isStorageError = error?.message?.includes('JSON') ||
                            error?.message?.includes('undefined') ||
                            error?.message?.includes('null') ||
                            error?.message?.includes('Cannot read')
     if (isStorageError) {
-      try { localStorage.clear() } catch {}
+      try { localStorage.clear() } catch { /* storage no disponible */ }
       window.location.reload()
     }
   }
 
   recover() {
-    try { localStorage.clear() } catch {}
+    try { localStorage.clear() } catch { /* storage no disponible */ }
     window.location.reload()
   }
 
