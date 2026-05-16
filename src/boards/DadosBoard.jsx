@@ -108,7 +108,8 @@ export default function DadosBoard({
                     const isMe    = hasRolled && pi === currentPlayer
                     const hasSugg = isMe && suggested > 0
                     const isSel   = selectedCell === key
-                    const alreadyPlayed = scores[pi]?.[row.id]?.[sub.id] !== ''
+                    // Truthy = ya jugado. undefined o '' = celda vacía (mostrar preview)
+                    const alreadyPlayed = !!scores[pi]?.[row.id]?.[sub.id]
 
                     return (
                       <td key={`${pi}-${sub.id}`} className="px-1 py-1">
