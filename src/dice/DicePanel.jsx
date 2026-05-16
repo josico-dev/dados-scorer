@@ -38,7 +38,7 @@ export default function DicePanel({
   const dieSize = 70
 
   return (
-    <div className="flex flex-col gap-2.5 safe-bottom px-2 pb-2.5 pt-1.5">
+    <div className="flex flex-col gap-2.5 safe-bottom px-2 pt-1.5">
 
       {/* Dados */}
       <div className="flex justify-center gap-2 items-center">

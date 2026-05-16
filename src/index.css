@@ -28,7 +28,7 @@
   }
 
   .safe-bottom {
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
   @media (min-width: 640px) {
