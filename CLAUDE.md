@@ -18,9 +18,11 @@ npm run dev         # arranca Vite en desarrollo
 npm run lint        # ESLint (debe pasar sin warnings)
 npm run build       # build a dist/
 npm run preview     # sirve dist/
+npm test            # Vitest en watch
+npm run test:run    # Vitest una sola pasada
 ```
 
-Antes de commitear, **siempre** correr `npx eslint .` y `npm run build` — el repo no tiene CI propio, sólo el deploy de Netlify, y queremos detectar fallos antes.
+Antes de commitear, **siempre** correr `npx eslint .`, `npm run test:run` y `npm run build`. GitHub Actions (`.github/workflows/ci.yml`) los repite en cada PR y push a `main` — si fallan ahí, el check de la PR se pone rojo.
 
 ## Estructura
 
@@ -74,7 +76,7 @@ Claves técnicas en `App.jsx`:
 
 - **Idioma**: comentarios y mensajes de commit en **español**.
 - **Estilo de commits**: tipo en minúscula (`fix:`, `feat:`, `refactor:`, `chore:`) + descripción breve.
-- **Tests**: no hay. No añadir Vitest/Jest a menos que el usuario lo pida explícitamente.
+- **Tests**: Vitest. Solo `src/diceParty/scoring.test.js` (funciones puras de scoring). No añadir tests de UI ni de hooks sin pedirlo.
 - **Comentarios**: minimalistas — explicar el *por qué* cuando no es obvio, nunca el *qué* (los nombres ya lo dicen).
 - **Sin emojis** salvo donde ya están (en UI: títulos, labels). No añadir a código, commits ni docs nuevos.
 
