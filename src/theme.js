@@ -37,4 +37,4 @@ export const THEMES = {
 
 const THEME_KEY = 'dados-scorer-theme'
 export const loadTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'dark' } catch { return 'dark' } }
-export const saveTheme = t => { try { localStorage.setItem(THEME_KEY, t) } catch {} }
+export const saveTheme = t => { try { localStorage.setItem(THEME_KEY, t) } catch { /* storage no disponible */ } }

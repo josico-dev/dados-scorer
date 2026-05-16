@@ -1,20 +1,15 @@
 // ─── Panel de dados — modo Normal y Party ────────────────────────────────
 
-import { useState, useEffect } from 'react'
 import Die from '../diceParty/Die'
 import { DICE_ICONS } from '../DiceIcons'
 import { NORMAL_VALUE_TO_ID } from './faces'
 
-const MAX_ROLLS = 3
-
 // Dado del modo normal (icono del scoreboard)
-function NormalDie({ value, locked, rolling, onClick }) {
-  const [animKey, setAnimKey] = useState(0)
-  useEffect(() => { if (rolling && !locked) setAnimKey(k => k + 1) }, [rolling, locked])
+function NormalDie({ value, locked, rolling, rollKey, onClick }) {
   const icon = value ? DICE_ICONS[NORMAL_VALUE_TO_ID[value]] : null
   return (
     <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 52, height: 52 }}>
-      <div key={animKey} className={rolling && !locked ? 'die-spinning' : ''}
+      <div key={rollKey} className={rolling && !locked ? 'die-spinning' : ''}
         style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center',
           filter: locked ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)' : 'none',
           opacity: value ? 1 : 0.35, transition: 'filter 0.2s, opacity 0.2s',
@@ -33,8 +28,7 @@ function NormalDie({ value, locked, rolling, onClick }) {
 }
 
 export default function DicePanel({
-  // Props individuales (pasados desde App)
-  dice, locked, rolling, rollsLeft, rollCount, hasRolled,
+  dice, locked, rolling, rollsLeft, rollCount,
   onRoll, onToggleLock, onPlay, canPlay,
   isMyTurn = true,
   mode = 'party',   // 'normal' | 'party'
@@ -51,10 +45,10 @@ export default function DicePanel({
         {(dice ?? []).map((val, i) =>
           mode === 'normal' ? (
             <NormalDie key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
-              onClick={() => onToggleLock?.(i)} />
+              rollKey={rollCount} onClick={() => onToggleLock?.(i)} />
           ) : (
             <Die key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
-              onClick={() => onToggleLock?.(i)} size={dieSize} />
+              rollKey={rollCount} onClick={() => onToggleLock?.(i)} size={dieSize} />
           )
         )}
       </div>

@@ -1,38 +1,11 @@
 // ─── Componente SVG de un dado ─────────────────────────────────────────────
-// El color depende del VALOR de la cara (1=rojo, 2=amarillo, 3=azul, 4=verde, 5=morado, 6=celeste)
+// El color depende del VALOR de la cara (1=rojo, 2=amarillo, …, 6=fucsia).
+// El padre pasa `rollKey` (típicamente rollCount) para que la animación CSS
+// se reinicie en cada tirada — el cambio de key remonta el SVG.
 
-import { useState, useEffect } from 'react'
+import { PIP_POSITIONS, FACE_COLORS, LOCKED_COLORS } from './dieStyles'
 
-const PIP_POSITIONS = {
-  1: [[30, 30]],
-  2: [[18, 18], [42, 42]],
-  3: [[18, 18], [30, 30], [42, 42]],
-  4: [[18, 18], [42, 18], [18, 42], [42, 42]],
-  5: [[18, 18], [42, 18], [30, 30], [18, 42], [42, 42]],
-  6: [[18, 15], [42, 15], [18, 30], [42, 30], [18, 45], [42, 45]],
-}
-
-// Color por VALOR de la cara
-export const FACE_COLORS = {
-  1: { bg: '#3b0f0f', border: '#ef4444', pip: '#fca5a5', glow: '#ef444488' }, // rojo
-  2: { bg: '#2e2200', border: '#eab308', pip: '#fde047', glow: '#eab30888' }, // amarillo
-  3: { bg: '#0f1f3b', border: '#3b82f6', pip: '#93c5fd', glow: '#3b82f688' }, // azul
-  4: { bg: '#0f2e1a', border: '#22c55e', pip: '#86efac', glow: '#22c55e88' }, // verde
-  5: { bg: '#1f0f3b', border: '#a855f7', pip: '#d8b4fe', glow: '#a855f788' }, // morado
-  6: { bg: '#2a0f2e', border: '#ec4899', pip: '#f9a8d4', glow: '#ec489988' }, // rosa/fucsia (diferente del azul 3)
-  0: { bg: '#1e293b', border: '#475569', pip: '#94a3b8', glow: '#47556944' }, // sin valor
-}
-
-// Bloqueado: blanco — no se confunde con ningún valor
-export const LOCKED_COLORS = { bg: '#1e293b', border: '#ffffff', pip: '#ffffff', glow: '#ffffff99' }
-
-export default function Die({ value, locked, rolling, onClick, className = '', size = 64 }) {
-  const [animKey, setAnimKey] = useState(0)
-
-  useEffect(() => {
-    if (rolling && !locked) setAnimKey(k => k + 1)
-  }, [rolling, locked])
-
+export default function Die({ value, locked, rolling, rollKey = 0, onClick, className = '', size = 64 }) {
   const pips   = value >= 1 && value <= 6 ? PIP_POSITIONS[value] : []
   const colors = locked ? LOCKED_COLORS : (FACE_COLORS[value] ?? FACE_COLORS[0])
 
@@ -44,7 +17,7 @@ export default function Die({ value, locked, rolling, onClick, className = '', s
       aria-label={value ? `Dado ${value}${locked ? ' (bloqueado)' : ''}` : 'Dado'}
     >
       <svg
-        key={animKey}
+        key={rollKey}
         viewBox="0 0 60 60"
         width={size}
         height={size}

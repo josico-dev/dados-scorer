@@ -137,7 +137,7 @@ export class GameRTC {
       try {
         const msg = JSON.parse(e.data)
         if (msg.type === 'state') this.onStateUpdate?.(msg.payload)
-      } catch {}
+      } catch { /* mensaje malformado: lo ignoramos */ }
     }
   }
 }

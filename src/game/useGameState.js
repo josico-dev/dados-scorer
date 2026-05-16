@@ -1,35 +1,51 @@
 // ─── Hook de estado del juego — compartido por ambos modos ────────────────
+//
+// El estado se persiste con una clave por modo, de modo que el formato de
+// `scores` guardado siempre coincide con el modo cargado en memoria. El modo
+// se pasa como parámetro al hook.
 
 import { useState, useRef, useEffect } from 'react'
 
-const KEY = 'dados-scorer-v4'
+const KEY_PREFIX = 'dados-scorer-v5'
+const keyFor = mode => `${KEY_PREFIX}-${mode}`
 
-function load() {
+function load(mode) {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(keyFor(mode))
     if (!raw) return null
     const d = JSON.parse(raw)
-    if (!Array.isArray(d?.players) || !d?.scores) return null
+    if (!Array.isArray(d?.players) || d?.scores == null) return null
     return d
-  } catch { try { localStorage.removeItem(KEY) } catch {}; return null }
+  } catch {
+    try { localStorage.removeItem(keyFor(mode)) } catch { /* storage no disponible */ }
+    return null
+  }
 }
 
-function save(state) {
-  try { localStorage.setItem(KEY, JSON.stringify(state)) } catch {}
+function save(mode, state) {
+  try { localStorage.setItem(keyFor(mode), JSON.stringify(state)) } catch { /* storage no disponible o lleno */ }
 }
 
-export function useGameState(defaultPlayers) {
-  const saved = load()
-  const [players,       setPlayers]       = useState(saved?.players ?? defaultPlayers)
-  const [scores,        setScores]        = useState(saved?.scores ?? {})
-  const [currentPlayer, setCurrentPlayer] = useState(saved?.currentPlayer ?? 0)
-  const [turn,          setTurn]          = useState(saved?.turn ?? 0)
-  const [extra,         setExtra]         = useState(saved?.extra ?? {})
+export function useGameState(defaultPlayers, mode) {
+  // Estado inicial leído del slot del modo activo (o defaults si no hay nada).
+  // useState con initializer lazy: solo se evalúa en el primer render.
+  const [players,       setPlayers]       = useState(() => load(mode)?.players       ?? defaultPlayers)
+  const [scores,        setScores]        = useState(() => load(mode)?.scores        ?? {})
+  const [currentPlayer, setCurrentPlayer] = useState(() => load(mode)?.currentPlayer ?? 0)
+  const [turn,          setTurn]          = useState(() => load(mode)?.turn          ?? 0)
+  const [extra,         setExtra]         = useState(() => load(mode)?.extra         ?? {})
 
-  const stateRef = useRef({})
-  stateRef.current = { players, scores, currentPlayer, turn, extra }
+  // Ref con el último snapshot — actualizada vía useEffect (no durante render)
+  const stateRef = useRef({ players, scores, currentPlayer, turn, extra, mode })
+  useEffect(() => {
+    stateRef.current = { players, scores, currentPlayer, turn, extra, mode }
+  }, [players, scores, currentPlayer, turn, extra, mode])
 
-  useEffect(() => { save({ players, scores, currentPlayer, turn, extra }) }, [players, scores, currentPlayer, turn, extra])
+  // Persistir bajo la clave del modo activo. App es responsable de mantener
+  // `scores` en formato coherente con `mode` (reiniciándolos al cambiar).
+  useEffect(() => {
+    save(mode, { players, scores, currentPlayer, turn, extra })
+  }, [mode, players, scores, currentPlayer, turn, extra])
 
   function updateScore(pi, key, subKey, value) {
     setScores(prev => ({

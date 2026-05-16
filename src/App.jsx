@@ -3,7 +3,7 @@
 // Solo routing: header + tablero activo + dados abajo.
 // Cada modo usa su propio tablero pero comparte dados, online y tema.
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { DEFAULT_PLAYERS, ROWS, SUBTYPES } from './config'
 import { THEMES, loadTheme, saveTheme } from './theme'
 import { useGameState } from './game/useGameState'
@@ -17,11 +17,10 @@ import DicePanel from './dice/DicePanel'
 import MultiplayerModal from './multiplayer/MultiplayerModal'
 import PlayersModal from './ui/PlayersModal'
 import ResetModal from './ui/ResetModal'
-import ErrorBoundary from './ErrorBoundary'
 
 const MODE_KEY = 'dados-scorer-mode'
 const loadMode = () => { try { return localStorage.getItem(MODE_KEY) || 'dados' } catch { return 'dados' } }
-const saveMode = m => { try { localStorage.setItem(MODE_KEY, m) } catch {} }
+const saveMode = m => { try { localStorage.setItem(MODE_KEY, m) } catch { /* storage no disponible */ } }
 
 // Scores vacíos para Dice Party
 function emptyDPScores(players) { return players.map(() => { const s = {}; ALL_COMBOS.forEach(c => { s[c.id] = null }); return s }) }
@@ -40,7 +39,7 @@ export default function App() {
   const isDark = themeName === 'dark'
 
   // ── Estado del juego ─────────────────────────────────────────────────────
-  const game = useGameState(DEFAULT_PLAYERS)
+  const game = useGameState(DEFAULT_PLAYERS, mode)
   const dice = useDice()
 
   // UI
@@ -52,15 +51,20 @@ export default function App() {
   const [remoteDice,       setRemoteDice]       = useState(null)
   // Dice Party specific
   const [selectedCombo,    setSelectedCombo]    = useState(null)
-  const [jokerActive,      setJokerActive]      = useState(false)
-  const [jokerUpperId,     setJokerUpperId]     = useState(null)
   const [jokerBonuses,     setJokerBonuses]     = useState([0, 0])
   const [dpPhase,          setDpPhase]          = useState('playing')
-  // Normal mode specific
+  // Normal mode specific — la celda seleccionada y el nº de dados pendiente
   const [selectedCell,     setSelectedCell]     = useState(null)
+  const pendingNormalRef = useRef(null)
 
   useEffect(() => { saveMode(mode) }, [mode])
-  useEffect(() => { saveTheme(themeName); document.body.style.background = theme.bodyBg }, [themeName])
+  useEffect(() => { saveTheme(themeName); document.body.style.background = theme.bodyBg }, [themeName, theme.bodyBg])
+
+  // ── Ref con el estado "actual" para callbacks estables (multiplayer) ─────
+  const appStateRef = useRef({})
+  useEffect(() => {
+    appStateRef.current = { mode, jokerBonuses, dpPhase, myPlayerIndex }
+  }, [mode, jokerBonuses, dpPhase, myPlayerIndex])
 
   // ── Multiplayer ──────────────────────────────────────────────────────────
   const mpRef = useRef(null)
@@ -74,7 +78,8 @@ export default function App() {
       if (!mpRef.current?.isHost) return
       if (action.action === 'requestState') {
         const s = game.stateRef.current
-        mpRef.current.sendState({ ...s, myPlayerIndex: 1, jokerBonuses, dpPhase, mode })
+        const a = appStateRef.current
+        mpRef.current.sendState({ ...s, myPlayerIndex: 1, jokerBonuses: a.jokerBonuses, dpPhase: a.dpPhase, mode: a.mode })
         return
       }
       if (action.action === 'registerName') {
@@ -89,7 +94,7 @@ export default function App() {
         setRemoteDice(null)
         dice.reset()
       }
-    }, []),
+    }, [game, dice]),
     onRemoteState: useCallback((state) => {
       if (state.players)            game.setPlayers(state.players)
       if (state.scores != null)     game.setScores(state.scores)
@@ -100,10 +105,12 @@ export default function App() {
       if (state.jokerBonuses)       setJokerBonuses(state.jokerBonuses)
       if (state.dpPhase)            setDpPhase(state.dpPhase)
       if (state.mode)               setMode(state.mode)
-    }, []),
+    }, [game]),
   })
 
   useEffect(() => { mpRef.current = mp }, [mp])
+  // Sincroniza el índice del jugador con la conexión (cambio de sistema externo).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (mp.isConnected) setMyPlayerIndex(mp.isHost ? 0 : 1) }, [mp.isConnected, mp.isHost])
 
   // Host emite estado en cada cambio
@@ -122,15 +129,14 @@ export default function App() {
     if (mpRef.current?.isConnected && dice.hasRolled) {
       mpRef.current.sendAction({ action: 'diceUpdate', dice: dice.dice, locked: dice.locked, rollsLeft: dice.rollsLeft })
     }
-  }, [dice.dice, dice.hasRolled])
+  }, [dice.dice, dice.locked, dice.rollsLeft, dice.hasRolled])
 
   const isOnline    = mp.isConnected
   const isMyTurn    = !isOnline || myPlayerIndex === game.currentPlayer
   const isParty     = mode === 'dice-party'
-  const hasDice     = showDice && dice.hasRolled
   const activeDice  = isMyTurn ? dice.dice : (remoteDice?.dice ?? dice.dice)
   // Score del jugador actual (puede ser array o objeto según el modo)
-  const currentScores = (Array.isArray(game.scores) ? game.scores[game.currentPlayer] : game.scores[game.currentPlayer]) ?? {}
+  const currentScores = game.scores?.[game.currentPlayer] ?? {}
 
   // ── Acciones ─────────────────────────────────────────────────────────────
 
@@ -159,30 +165,27 @@ export default function App() {
   function handleNormalCellClick(pi, rowId, subId, count) {
     if (isOnline && pi !== myPlayerIndex) return
     setSelectedCell(`${pi}-${rowId}-${subId}`)
-    // Guardar la selección para cuando pulse JUGAR
-    game.stateRef.current._pending = { pi, rowId, subId, count }
+    pendingNormalRef.current = { pi, rowId, subId, count }
   }
 
   function handleNormalPlay() {
-    const p = game.stateRef.current._pending
+    const p = pendingNormalRef.current
     if (!p) return
     handleUpdateScore(p.pi, p.rowId, p.subId, String(p.count))
     handleAdvanceTurn()
-    game.stateRef.current._pending = null
+    pendingNormalRef.current = null
   }
 
   // ── Party mode: seleccionar combo + JUGAR ─────────────────────────────
 
   function handleComboClick(comboId) {
-    const pi = game.currentPlayer
     if (!dice.hasRolled || !isMyTurn) return
     setSelectedCombo(prev => prev === comboId ? null : comboId)
   }
 
   function handlePartyPlay() {
     if (!selectedCombo || !dice.hasRolled) return
-    const playerScores = currentScores
-    const potential = calcPotentialFn(dice.dice, playerScores, jokerActive, jokerUpperId)
+    const potential = calcPotentialFn(dice.dice, currentScores, jokerActive, jokerUpperId)
     const entry = potential[selectedCombo]
     if (!entry?.available) return
 
@@ -203,17 +206,13 @@ export default function App() {
     handleAdvanceTurn()
   }
 
-  // Detectar joker en Dice Party al lanzar
-  useEffect(() => {
+  // Detectar joker en Dice Party (derivado de dados + scores del jugador actual)
+  const { jokerActive, jokerUpperId } = useMemo(() => {
     if (isParty && dice.hasRolled && game.scores?.[game.currentPlayer]) {
-      const { jokerActive: ja, jokerUpperId: ju } = detectJoker(dice.dice, currentScores)
-      setJokerActive(ja)
-      setJokerUpperId(ju)
-    } else {
-      setJokerActive(false)
-      setJokerUpperId(null)
+      return detectJoker(dice.dice, game.scores[game.currentPlayer])
     }
-  }, [dice.dice, dice.hasRolled, isParty, game.currentPlayer])
+    return { jokerActive: false, jokerUpperId: null }
+  }, [dice.dice, dice.hasRolled, isParty, game.currentPlayer, game.scores])
 
   // ── Reset ──────────────────────────────────────────────────────────────
 
@@ -246,11 +245,26 @@ export default function App() {
 
   function toggleTheme() { setThemeName(t => t === 'dark' ? 'light' : 'dark') }
 
+  function switchMode(newMode) {
+    if (newMode === mode) return
+    const empty = newMode === 'dice-party' ? emptyDPScores(game.players) : emptyNormalScores(game.players)
+    game.setScores(empty)
+    game.setCurrentPlayer(0)
+    game.setTurn(0)
+    setJokerBonuses(game.players.map(() => 0))
+    setDpPhase('playing')
+    setMode(newMode)
+    dice.reset()
+    setSelectedCombo(null)
+    setSelectedCell(null)
+    pendingNormalRef.current = null
+  }
+
   // En Dice Party, dados siempre visibles. En Normal, cuando showDice está activo.
   const diceVisible = isParty || showDice
 
   // Forzar combo en joker
-  const forcedCombo = jokerActive && jokerUpperId && (currentScores)[jokerUpperId] === null
+  const forcedCombo = jokerActive && jokerUpperId && currentScores[jokerUpperId] === null
     ? jokerUpperId : null
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -267,17 +281,7 @@ export default function App() {
           <div className="flex-1 flex justify-center">
             <div className="flex rounded-2xl p-1 gap-1" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
               {[{ id: 'dados', label: '🃏 Dados' }, { id: 'dice-party', label: '🎲 Dice Party' }].map(m => (
-                <button key={m.id} onClick={() => {
-                    if (m.id !== mode) {
-                      const empty = m.id === 'dice-party' ? emptyDPScores(game.players) : emptyNormalScores(game.players)
-                      game.setScores(empty)
-                      game.setCurrentPlayer(0)
-                      game.setTurn(0)
-                      setJokerBonuses(game.players.map(() => 0))
-                      setDpPhase('playing')
-                    }
-                    setMode(m.id); dice.reset(); setSelectedCombo(null); setSelectedCell(null)
-                  }}
+                <button key={m.id} onClick={() => switchMode(m.id)}
                   className="px-4 py-2 rounded-xl text-sm font-black transition-all"
                   style={mode === m.id ? { background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', boxShadow: '0 2px 12px rgba(124,58,237,0.4)' } : { color: theme.textMuted }}>
                   {m.label}
@@ -346,7 +350,6 @@ export default function App() {
               rolling={dice.rolling}
               rollsLeft={dice.rollsLeft}
               rollCount={dice.rollCount}
-              hasRolled={dice.hasRolled}
               onRoll={dice.roll}
               onToggleLock={dice.toggleLock}
               onPlay={isParty ? handlePartyPlay : handleNormalPlay}

@@ -18,7 +18,8 @@ export function useDice({ onRollChange } = {}) {
   const [rolling,   setRolling]   = useState(false)
   const [rollsLeft, setRollsLeft] = useState(MAX_ROLLS)
 
-  const hasRolled = rollsLeft < MAX_ROLLS
+  const rollCount = MAX_ROLLS - rollsLeft
+  const hasRolled = rollCount > 0
 
   const onRollChangeRef = useRef(onRollChange)
   useEffect(() => { onRollChangeRef.current = onRollChange }, [onRollChange])
@@ -63,6 +64,7 @@ export function useDice({ onRollChange } = {}) {
     locked,
     rolling,
     rollsLeft,
+    rollCount,
     hasRolled,
     maxRolls: MAX_ROLLS,
     roll,

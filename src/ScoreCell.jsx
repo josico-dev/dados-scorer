@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function ScoreCell({ value, faceValue, onChange, theme, isDark }) {
+export default function ScoreCell({ value, faceValue, onChange, theme }) {
   const [focused, setFocused] = useState(false)
 
   const numDice = parseFloat(value)

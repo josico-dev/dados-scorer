@@ -11,7 +11,7 @@
 //   onComboClick(comboId)
 
 import { useState } from 'react'
-import { FACE_COLORS } from '../diceParty/Die'
+import { FACE_COLORS } from '../diceParty/dieStyles'
 import { UPPER_COMBOS, LOWER_COMBOS } from '../diceParty/combinations'
 import { calcPotential, calcUpperSum, calcTotal } from '../diceParty/scoring'
 
