@@ -8,21 +8,21 @@ import { NORMAL_VALUE_TO_ID } from './faces'
 function NormalDie({ value, locked, rolling, rollKey, onClick }) {
   const icon = value ? DICE_ICONS[NORMAL_VALUE_TO_ID[value]] : null
   return (
-    <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 60, height: 60 }}>
+    <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 70, height: 70 }}>
       <div key={rollKey} className={rolling && !locked ? 'die-spinning' : ''}
-        style={{ width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        style={{ width: 70, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center',
           filter: locked ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)' : 'none',
           opacity: value ? 1 : 0.35, transition: 'filter 0.2s, opacity 0.2s',
-          transform: 'scale(1.5)', transformOrigin: 'center' }}>
+          transform: 'scale(2)', transformOrigin: 'center' }}>
         {icon ?? (
-          <svg viewBox="0 0 48 48" className="w-10 h-10" fill="none">
+          <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none">
             <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="2.5"/>
             <text x="24" y="32" textAnchor="middle" fontSize="20" fill="#475569" fontWeight="bold">?</text>
           </svg>
         )}
       </div>
-      {locked && <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow"
-        style={{ fontSize: 10, color: '#000', zIndex: 10 }}>🔒</div>}
+      {locked && <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow"
+        style={{ fontSize: 12, color: '#000', zIndex: 10 }}>🔒</div>}
     </button>
   )
 }
@@ -35,13 +35,13 @@ export default function DicePanel({
   theme, isDark,
 }) {
   const t = theme ?? {}
-  const dieSize = 64
+  const dieSize = 70
 
   return (
-    <div className="flex flex-col gap-2.5 safe-bottom px-3 pb-2.5 pt-1.5">
+    <div className="flex flex-col gap-2.5 safe-bottom px-2 pb-2.5 pt-1.5">
 
       {/* Dados */}
-      <div className="flex justify-center gap-2.5 items-center">
+      <div className="flex justify-center gap-2 items-center">
         {(dice ?? []).map((val, i) =>
           mode === 'normal' ? (
             <NormalDie key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
