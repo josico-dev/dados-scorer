@@ -1,7 +1,7 @@
 // ─── App — orquestador ────────────────────────────────────────────────────
 //
-// Solo routing: header + tablero activo + dados abajo.
-// Cada modo usa su propio tablero pero comparte dados, online y tema.
+// Online: SYNC SIMÉTRICO. Cualquier mutación local emite el state completo
+// al peer. El receptor reemplaza su state. No hay autoridad host/guest.
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { DEFAULT_PLAYERS, ROWS, SUBTYPES } from './config'
@@ -47,117 +47,114 @@ export default function App() {
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [showResetModal,   setShowResetModal]   = useState(false)
   const [showDice,         setShowDice]         = useState(false)
-  const [myPlayerIndex,    setMyPlayerIndex]    = useState(0)
-  const [remoteDice,       setRemoteDice]       = useState(null)
-  // Dice Party specific
+  // Dice Party
   const [selectedCombo,    setSelectedCombo]    = useState(null)
   const [jokerBonuses,     setJokerBonuses]     = useState([0, 0])
   const [dpPhase,          setDpPhase]          = useState('playing')
-  // Normal mode specific — la celda seleccionada y el nº de dados pendiente
+  // Normal mode
   const [selectedCell,     setSelectedCell]     = useState(null)
   const pendingNormalRef = useRef(null)
 
   useEffect(() => { saveMode(mode) }, [mode])
   useEffect(() => { saveTheme(themeName); document.body.style.background = theme.bodyBg }, [themeName, theme.bodyBg])
 
-  // ── Ref con el estado "actual" para callbacks estables (multiplayer) ─────
-  const appStateRef = useRef({})
-  useEffect(() => {
-    appStateRef.current = { mode, jokerBonuses, dpPhase, myPlayerIndex }
-  }, [mode, jokerBonuses, dpPhase, myPlayerIndex])
-
-  // ── Multiplayer ──────────────────────────────────────────────────────────
-  const mpRef = useRef(null)
+  // ── Multiplayer (sync simétrico) ─────────────────────────────────────────
+  // Flag: estoy aplicando un state recibido → no re-emitirlo
+  const skipEmitRef = useRef(false)
+  // Flag: ya recibí al menos un state remoto (el que se une espera al iniciador)
+  const hasReceivedStateRef = useRef(false)
 
   const mp = useMultiplayer({
-    onRemoteAction: useCallback((action) => {
-      if (action.action === 'diceUpdate') {
-        setRemoteDice({ dice: action.dice, locked: action.locked, rollsLeft: action.rollsLeft })
-        return
+    onRemoteState: useCallback(state => {
+      skipEmitRef.current = true
+      hasReceivedStateRef.current = true
+
+      const prev = game.stateRef.current
+      const turnChanged = state.turn != null && state.turn !== prev.turn
+      const modeChanged = state.mode != null && state.mode !== prev.mode
+      const currentPlayerChanged = state.currentPlayer != null && state.currentPlayer !== prev.currentPlayer
+
+      if (state.players)               game.setPlayers(state.players)
+      if (state.scores != null)        game.setScores(state.scores)
+      if (state.currentPlayer != null) game.setCurrentPlayer(state.currentPlayer)
+      if (state.turn != null)          game.setTurn(state.turn)
+      if (state.jokerBonuses)          setJokerBonuses(state.jokerBonuses)
+      if (state.dpPhase)               setDpPhase(state.dpPhase)
+      if (state.mode)                  setMode(state.mode)
+      if (state.dice) {
+        dice.applyRemote({ dice: state.dice, locked: state.locked, rollsLeft: state.rollsLeft })
       }
-      if (!mpRef.current?.isHost) return
-      if (action.action === 'requestState') {
-        const s = game.stateRef.current
-        const a = appStateRef.current
-        mpRef.current.sendState({ ...s, myPlayerIndex: 1, jokerBonuses: a.jokerBonuses, dpPhase: a.dpPhase, mode: a.mode })
-        return
-      }
-      if (action.action === 'registerName') {
-        game.setPlayers(prev => { const n = [...prev]; n[action.index] = action.name; return n })
-        return
-      }
-      if (action.action === 'updateScore') {
-        game.updateScore(action.pi, action.key, action.subKey, action.value)
-      }
-      if (action.action === 'nextPlayer') {
-        game.advanceTurn()
-        setRemoteDice(null)
-        dice.reset()
+
+      // Resetear UI volátil cuando cambia turno / modo (afecta a ambos peers)
+      if (turnChanged || modeChanged || currentPlayerChanged) {
+        setSelectedCell(null)
+        setSelectedCombo(null)
+        pendingNormalRef.current = null
       }
     }, [game, dice]),
-    onRemoteState: useCallback((state) => {
-      if (state.players)            game.setPlayers(state.players)
-      if (state.scores != null)     game.setScores(state.scores)
-      if (state.currentPlayer != null) game.setCurrentPlayer(state.currentPlayer)
-      if (state.turn != null)       game.setTurn(state.turn)
-      if (state.extra != null)      game.setExtra(state.extra)
-      if (state.myPlayerIndex != null) setMyPlayerIndex(state.myPlayerIndex)
-      if (state.jokerBonuses)       setJokerBonuses(state.jokerBonuses)
-      if (state.dpPhase)            setDpPhase(state.dpPhase)
-      if (state.mode)               setMode(state.mode)
-    }, [game]),
+
+    onConnected: useCallback(isInitiator => {
+      // Iniciador emite su state inmediatamente para que el peer se ponga al día.
+      // Quien se une espera a recibir.
+      if (isInitiator) {
+        // skipEmitRef false: dejar que el useEffect emit dispare en el próximo render
+        // (en realidad se forzará vía cambio de mp.isConnected)
+        hasReceivedStateRef.current = true
+      }
+    }, []),
   })
 
-  useEffect(() => { mpRef.current = mp }, [mp])
-  // Sincroniza el índice del jugador con la conexión (cambio de sistema externo).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (mp.isConnected) setMyPlayerIndex(mp.isHost ? 0 : 1) }, [mp.isConnected, mp.isHost])
-
-  // Host emite estado en cada cambio
-  useEffect(() => {
-    if (mpRef.current?.isConnected && mpRef.current?.isHost) {
-      mpRef.current.sendState({
-        players: game.players, scores: game.scores,
-        currentPlayer: game.currentPlayer, turn: game.turn,
-        jokerBonuses, dpPhase, mode,
-      })
-    }
-  }, [game.players, game.scores, game.currentPlayer, game.turn, jokerBonuses, dpPhase, mode])
-
-  // Sincronizar dados al lanzar
-  useEffect(() => {
-    if (mpRef.current?.isConnected && dice.hasRolled) {
-      mpRef.current.sendAction({ action: 'diceUpdate', dice: dice.dice, locked: dice.locked, rollsLeft: dice.rollsLeft })
-    }
-  }, [dice.dice, dice.locked, dice.rollsLeft, dice.hasRolled])
-
-  const isOnline    = mp.isConnected
-  const isMyTurn    = !isOnline || myPlayerIndex === game.currentPlayer
-  const isParty     = mode === 'dice-party'
-  const activeDice  = isMyTurn ? dice.dice : (remoteDice?.dice ?? dice.dice)
-  // Score del jugador actual (puede ser array o objeto según el modo)
+  const myPlayerIndex = mp.myIndex ?? 0
+  const isOnline      = mp.isConnected
+  const isMyTurn      = !isOnline || myPlayerIndex === game.currentPlayer
+  const isParty       = mode === 'dice-party'
+  const activeDice    = dice.dice
   const currentScores = game.scores?.[game.currentPlayer] ?? {}
 
-  // ── Acciones ─────────────────────────────────────────────────────────────
-
-  function handleUpdateScore(pi, key, subKey, value) {
-    if (isOnline && !mp.isHost) {
-      mp.sendAction({ action: 'updateScore', pi, key, subKey, value })
-    } else {
-      game.updateScore(pi, key, subKey, value)
+  // ── Emit state al peer cuando algo compartido cambia ─────────────────────
+  // Destructuro para tener referencias estables (sendState es useCallback con [])
+  const { isConnected: mpConnected, sendState: mpSendState } = mp
+  useEffect(() => {
+    if (skipEmitRef.current) {
+      skipEmitRef.current = false
+      return
     }
-  }
+    if (!mpConnected) return
+    // Quien se une no emite hasta haber recibido el state inicial del iniciador
+    if (!hasReceivedStateRef.current) return
+
+    mpSendState({
+      players: game.players,
+      scores: game.scores,
+      currentPlayer: game.currentPlayer,
+      turn: game.turn,
+      jokerBonuses,
+      dpPhase,
+      mode,
+      dice: dice.dice,
+      locked: dice.locked,
+      rollsLeft: dice.rollsLeft,
+    })
+  }, [
+    mpConnected, mpSendState,
+    game.players, game.scores, game.currentPlayer, game.turn,
+    jokerBonuses, dpPhase, mode,
+    dice.dice, dice.locked, dice.rollsLeft,
+  ])
+
+  // Al desconectar, resetea el flag para una próxima conexión
+  useEffect(() => {
+    if (!mpConnected) hasReceivedStateRef.current = false
+  }, [mpConnected])
+
+  // ── Acciones — siempre locales, el sync se encarga del resto ─────────────
 
   function handleAdvanceTurn() {
-    if (isOnline && !mp.isHost) {
-      mp.sendAction({ action: 'nextPlayer' })
-    } else {
-      game.advanceTurn()
-      setRemoteDice(null)
-    }
+    game.advanceTurn()
     dice.reset()
     setSelectedCell(null)
     setSelectedCombo(null)
+    pendingNormalRef.current = null
   }
 
   // ── Normal mode: JUGAR ─────────────────────────────────────────────────
@@ -171,9 +168,8 @@ export default function App() {
   function handleNormalPlay() {
     const p = pendingNormalRef.current
     if (!p) return
-    handleUpdateScore(p.pi, p.rowId, p.subId, String(p.count))
+    game.updateScore(p.pi, p.rowId, p.subId, String(p.count))
     handleAdvanceTurn()
-    pendingNormalRef.current = null
   }
 
   // ── Party mode: seleccionar combo + JUGAR ─────────────────────────────
@@ -189,24 +185,20 @@ export default function App() {
     const entry = potential[selectedCombo]
     if (!entry?.available) return
 
-    // Actualizar scores
     const pi = game.currentPlayer
-    handleUpdateScore(pi, selectedCombo, null, entry.score)
+    game.updateScore(pi, selectedCombo, null, entry.score)
 
-    // Joker bonus
     if (jokerActive) {
       setJokerBonuses(prev => prev.map((b, i) => i === pi ? b + 1 : b))
     }
 
-    // Avanzar turno
     const totalTurns = 13 * game.players.length
-    if (game.turn + 1 >= totalTurns) {
-      setDpPhase('done')
-    }
+    if (game.turn + 1 >= totalTurns) setDpPhase('done')
+
     handleAdvanceTurn()
   }
 
-  // Detectar joker en Dice Party (derivado de dados + scores del jugador actual)
+  // Detectar joker en Dice Party (derivado)
   const { jokerActive, jokerUpperId } = useMemo(() => {
     if (isParty && dice.hasRolled && game.scores?.[game.currentPlayer]) {
       return detectJoker(dice.dice, game.scores[game.currentPlayer])
@@ -214,7 +206,7 @@ export default function App() {
     return { jokerActive: false, jokerUpperId: null }
   }, [dice.dice, dice.hasRolled, isParty, game.currentPlayer, game.scores])
 
-  // ── Reset ──────────────────────────────────────────────────────────────
+  // ── Reset / jugadores / online ─────────────────────────────────────────
 
   function handleReset() {
     const empty = isParty ? emptyDPScores(game.players) : emptyNormalScores(game.players)
@@ -224,23 +216,29 @@ export default function App() {
     dice.reset()
     setSelectedCombo(null)
     setSelectedCell(null)
+    pendingNormalRef.current = null
     setShowResetModal(false)
   }
 
   function handleSavePlayers(names) {
-    const empty = isParty ? emptyDPScores(names) : emptyNormalScores(names)
-    game.resetGame(names, empty, {})
-    setJokerBonuses(names.map(() => 0))
+    // Si estamos online, limitar a 2 jugadores
+    const finalNames = isOnline ? names.slice(0, 2) : names
+    const safeNames = finalNames.length >= 1 ? finalNames : ['Jugador 1']
+    const empty = isParty ? emptyDPScores(safeNames) : emptyNormalScores(safeNames)
+    game.resetGame(safeNames, empty, {})
+    setJokerBonuses(safeNames.map(() => 0))
     setShowPlayersModal(false)
   }
 
   function handleStartOnline({ name, index }) {
-    setMyPlayerIndex(index)
-    const fresh = ['Jugador 1', 'Jugador 2']
-    fresh[index] = name
-    const empty = isParty ? emptyDPScores(fresh) : emptyNormalScores(fresh)
-    game.resetGame(fresh, empty)
-    setJokerBonuses([0, 0])
+    // Solo actualiza mi propio nombre en el slot correspondiente.
+    // No resetea la partida — sync simétrico se encarga al conectar.
+    game.setPlayers(prev => {
+      const next = [...prev]
+      while (next.length < 2) next.push(`Jugador ${next.length + 1}`)
+      next[index] = name || `Jugador ${index + 1}`
+      return next.slice(0, 2)
+    })
   }
 
   function toggleTheme() { setThemeName(t => t === 'dark' ? 'light' : 'dark') }
@@ -260,10 +258,14 @@ export default function App() {
     pendingNormalRef.current = null
   }
 
-  // En Dice Party, dados siempre visibles. En Normal, cuando showDice está activo.
+  // Toggle lock: solo si es mi turno (bloquea manipulación del espectador)
+  const handleToggleLock = useCallback(i => {
+    if (!isMyTurn) return
+    dice.toggleLock(i)
+  }, [isMyTurn, dice])
+
   const diceVisible = isParty || showDice
 
-  // Forzar combo en joker
   const forcedCombo = jokerActive && jokerUpperId && currentScores[jokerUpperId] === null
     ? jokerUpperId : null
 
@@ -336,7 +338,10 @@ export default function App() {
             currentPlayer={game.currentPlayer} myPlayerIndex={isOnline ? myPlayerIndex : null} isOnline={isOnline}
             diceValues={activeDice} hasRolled={dice.hasRolled && isMyTurn} selectedCell={selectedCell}
             onCellClick={handleNormalCellClick}
-            onUpdateScore={(pi, rowId, subId, val) => handleUpdateScore(pi, rowId, subId, val)}
+            onUpdateScore={(pi, rowId, subId, val) => {
+              if (isOnline && pi !== myPlayerIndex) return
+              game.updateScore(pi, rowId, subId, val)
+            }}
             theme={theme} isDark={isDark}
           />
         )}
@@ -345,13 +350,13 @@ export default function App() {
         {diceVisible && (
           <div className="shrink-0">
             <DicePanel
-              dice={isMyTurn ? dice.dice : (remoteDice?.dice ?? Array(5).fill(0))}
-              locked={isMyTurn ? dice.locked : (remoteDice?.locked ?? Array(5).fill(false))}
+              dice={dice.dice}
+              locked={dice.locked}
               rolling={dice.rolling}
               rollsLeft={dice.rollsLeft}
               rollCount={dice.rollCount}
               onRoll={dice.roll}
-              onToggleLock={dice.toggleLock}
+              onToggleLock={handleToggleLock}
               onPlay={isParty ? handlePartyPlay : handleNormalPlay}
               canPlay={isParty ? !!selectedCombo : !!selectedCell}
               isMyTurn={isMyTurn}
@@ -365,7 +370,7 @@ export default function App() {
 
       {/* Modales */}
       {showMultiplayer && <MultiplayerModal mp={mp} isDark={isDark} onStartOnline={handleStartOnline} onClose={() => setShowMultiplayer(false)} />}
-      {showPlayersModal && <PlayersModal players={game.players} onSave={handleSavePlayers} onClose={() => setShowPlayersModal(false)} />}
+      {showPlayersModal && <PlayersModal players={game.players} maxPlayers={isOnline ? 2 : Infinity} onSave={handleSavePlayers} onClose={() => setShowPlayersModal(false)} />}
       {showResetModal && <ResetModal onConfirm={handleReset} onClose={() => setShowResetModal(false)} />}
     </div>
   )

@@ -43,7 +43,7 @@ Conexión directa entre dos dispositivos por WebRTC, sin servidor. Flujo:
 2. El otro pega ese código, genera un código de respuesta y lo manda de vuelta.
 3. El primero pega la respuesta y ya están conectados.
 
-El host es la fuente de verdad; el guest envía acciones y recibe el estado completo.
+**Sync simétrico**: ambos peers son iguales. Cualquier cambio local (jugada, cambio de turno, modo, reset, jugadores) se aplica al instante y se emite el state completo al otro, que lo aplica. Sin autoridad host/guest. El que crea la sala se asigna al slot 0; el que se une, al slot 1. Cuando se conecta a media partida, el iniciador emite su state actual para sincronizar.
 
 > ⚠️ Usa STUN públicos (sin TURN). Algunas redes móviles o corporativas con NAT simétrico pueden bloquear la conexión — si pasa, prueba con WiFi.
 

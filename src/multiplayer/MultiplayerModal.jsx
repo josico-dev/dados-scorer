@@ -17,12 +17,12 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
     navigator.clipboard.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
-  // ── HOST ─────────────────────────────────────────────────────────────────
+  // ── Crea sala (iniciador) ────────────────────────────────────────────────
 
   async function handleCreateRoom() {
     const name = myName.trim() || 'Jugador 1'
-    // Notificar al App: soy el host, me llamo `name`
-    onStartOnline?.({ role: 'host', name, index: 0 })
+    // Actualiza mi nombre en el slot 0 (no resetea la partida)
+    onStartOnline?.({ name, index: 0 })
     setView('host-offer')
     const code = await mp.startAsHost()
     if (!code) setView('menu')
@@ -33,7 +33,7 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
     await mp.confirmAnswer(inputCode.trim())
   }
 
-  // ── GUEST ─────────────────────────────────────────────────────────────────
+  // ── Se une a sala ─────────────────────────────────────────────────────────
 
   async function handleJoin() {
     if (!inputCode.trim()) return
@@ -43,9 +43,10 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
 
   function handleGuestReady() {
     const name = myName.trim() || 'Jugador 2'
-    onStartOnline?.({ role: 'guest', name, index: 1 })
-    // Anunciar nombre al host
-    mp.sendAction({ action: 'registerName', index: 1, name })
+    // Actualiza mi nombre en el slot 1. El sync simétrico lo propaga al peer.
+    onStartOnline?.({ name, index: 1 })
+    // Pasa a la vista "conectado" (condition al inicio del render)
+    setView('menu')
   }
 
   // ── Conectado ─────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
           <div className="text-4xl mb-2">🤝</div>
           <h2 className="font-black text-lg mb-1" style={{ color: '#22c55e' }}>¡Conectados!</h2>
           <p className="text-sm mb-4" style={{ color: t.muted }}>
-            {mp.isHost ? 'Eres el Host' : 'Eres el Guest'}
+            Eres el jugador {(mp.myIndex ?? 0) + 1}
           </p>
           <button onClick={() => { mp.disconnect(); onClose() }}
             className="w-full py-2.5 rounded-xl font-bold text-sm"
@@ -89,27 +90,27 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
             <button onClick={handleCreateRoom}
               className="w-full py-3 rounded-xl font-black text-sm active:scale-95"
               style={{ background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff' }}>
-              🎲 Crear sala (Host)
+              🎲 Crear sala
             </button>
             <button onClick={() => setView('guest-join')}
               className="w-full py-3 rounded-xl font-black text-sm active:scale-95"
               style={{ background: 'linear-gradient(135deg,#0ea5e9,#06b6d4)', color: '#000' }}>
-              🔗 Unirse a sala (Guest)
+              🔗 Unirse a sala
             </button>
           </div>
         </>
       )}
 
-      {/* Host: mostrar código */}
+      {/* Iniciador: mostrar código */}
       {view === 'host-offer' && (
         <>
           <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Paso 1 — Comparte este código</h2>
-          <p className="text-xs mb-3" style={{ color: t.muted }}>Envía este código al guest por WhatsApp.</p>
+          <p className="text-xs mb-3" style={{ color: t.muted }}>Envía este código al otro jugador por WhatsApp.</p>
           {mp.offerCode
             ? <CodeBox code={mp.offerCode} onCopy={copy} copied={copied} t={t} label="Tu código de sala" />
             : <Spinner t={t} />}
           <div className="my-3 border-t" style={{ borderColor: t.border }} />
-          <p className="text-xs mb-2 font-bold" style={{ color: t.muted }}>Paso 2 — Pega la respuesta del guest:</p>
+          <p className="text-xs mb-2 font-bold" style={{ color: t.muted }}>Paso 2 — Pega aquí la respuesta:</p>
           <textarea value={inputCode} onChange={e => setInputCode(e.target.value)}
             placeholder="Pega aquí el código de respuesta..."
             rows={3} className="w-full rounded-xl px-3 py-2 text-xs font-mono resize-none focus:outline-none mb-3"
@@ -122,10 +123,10 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
         </>
       )}
 
-      {/* Guest: pegar código del host */}
+      {/* Quien se une: pegar código del iniciador */}
       {view === 'guest-join' && (
         <>
-          <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Pega el código del host</h2>
+          <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Pega el código de la sala</h2>
           <textarea value={inputCode} onChange={e => setInputCode(e.target.value)}
             placeholder="Pega aquí el código de sala..."
             rows={3} className="w-full rounded-xl px-3 py-2 text-xs font-mono resize-none focus:outline-none mb-3"
@@ -138,11 +139,11 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
         </>
       )}
 
-      {/* Guest: código de respuesta + confirmar nombre */}
+      {/* Quien se une: código de respuesta + confirmar nombre */}
       {view === 'guest-answer' && (
         <>
-          <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Paso 2 — Manda esto al host</h2>
-          <p className="text-xs mb-3" style={{ color: t.muted }}>Copia y manda al host. Luego confirma tu nombre.</p>
+          <h2 className="font-black text-base mb-1" style={{ color: t.text }}>Paso 2 — Mándale este código</h2>
+          <p className="text-xs mb-3" style={{ color: t.muted }}>Copia y mándalo al otro jugador. Luego confirma tu nombre.</p>
           <CodeBox code={answerCode} onCopy={copy} copied={copied} t={t} label="Tu código de respuesta" />
           <div className="my-3 border-t" style={{ borderColor: t.border }} />
           <input value={myName} onChange={e => setMyName(e.target.value)}
@@ -155,7 +156,7 @@ export default function MultiplayerModal({ onClose, mp, isDark, onStartOnline })
                 style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
                 ✅ ¡Listo!
               </button>
-            : <p className="text-xs text-center" style={{ color: t.muted }}>⏳ Esperando que el host confirme...</p>
+            : <p className="text-xs text-center" style={{ color: t.muted }}>⏳ Esperando confirmación...</p>
           }
         </>
       )}

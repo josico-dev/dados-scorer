@@ -1,13 +1,13 @@
 // ─── WebRTC Multiplayer — señalización manual ─────────────────────────────
 //
 // Flujo:
-//   Host → crea oferta (offer) → comparte código por WhatsApp
-//   Guest → pega oferta, genera respuesta (answer) → manda de vuelta
-//   Host → pega respuesta → conexión P2P establecida
+//   Iniciador → crea oferta (offer) → comparte código por WhatsApp
+//   Quien se une → pega oferta, genera respuesta (answer) → manda de vuelta
+//   Iniciador → pega respuesta → conexión P2P establecida
 //
-// Una vez conectados, se sincronizan:
-//   - Estado completo del juego (al conectar y en cada cambio)
-//   - Acciones del guest → host las aplica y re-emite el estado
+// Una vez conectados, ambos peers son iguales: cada uno envía su state
+// completo al otro vía DataChannel cuando cambia algo localmente. El receptor
+// reemplaza su state. Sin autoridad, sin actions diferenciadas.
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
