@@ -8,21 +8,21 @@ import { NORMAL_VALUE_TO_ID } from './faces'
 function NormalDie({ value, locked, rolling, rollKey, onClick }) {
   const icon = value ? DICE_ICONS[NORMAL_VALUE_TO_ID[value]] : null
   return (
-    <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 52, height: 52 }}>
+    <button onClick={onClick} className="relative touch-manipulation select-none focus:outline-none" style={{ width: 60, height: 60 }}>
       <div key={rollKey} className={rolling && !locked ? 'die-spinning' : ''}
-        style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        style={{ width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
           filter: locked ? 'drop-shadow(0 0 8px #ffffff99) brightness(1.3) saturate(0)' : 'none',
           opacity: value ? 1 : 0.35, transition: 'filter 0.2s, opacity 0.2s',
-          transform: 'scale(1.44)', transformOrigin: 'center' }}>
+          transform: 'scale(1.5)', transformOrigin: 'center' }}>
         {icon ?? (
-          <svg viewBox="0 0 48 48" className="w-9 h-9" fill="none">
+          <svg viewBox="0 0 48 48" className="w-10 h-10" fill="none">
             <rect x="2" y="2" width="44" height="44" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="2.5"/>
             <text x="24" y="32" textAnchor="middle" fontSize="20" fill="#475569" fontWeight="bold">?</text>
           </svg>
         )}
       </div>
-      {locked && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white flex items-center justify-center shadow"
-        style={{ fontSize: 8, color: '#000', zIndex: 10 }}>🔒</div>}
+      {locked && <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow"
+        style={{ fontSize: 10, color: '#000', zIndex: 10 }}>🔒</div>}
     </button>
   )
 }
@@ -35,13 +35,13 @@ export default function DicePanel({
   theme, isDark,
 }) {
   const t = theme ?? {}
-  const dieSize = 56
+  const dieSize = 64
 
   return (
-    <div className="flex flex-col gap-2 safe-bottom px-3 pb-2 pt-1">
+    <div className="flex flex-col gap-2.5 safe-bottom px-3 pb-2.5 pt-1.5">
 
       {/* Dados */}
-      <div className="flex justify-center gap-2 items-center">
+      <div className="flex justify-center gap-2.5 items-center">
         {(dice ?? []).map((val, i) =>
           mode === 'normal' ? (
             <NormalDie key={i} value={val} locked={(locked ?? [])[i]} rolling={rolling}
@@ -58,7 +58,7 @@ export default function DicePanel({
         <button
           onClick={onRoll}
           disabled={rolling || (rollsLeft ?? 0) <= 0 || !isMyTurn}
-          className="flex-1 py-2.5 rounded-xl font-bold text-sm transition disabled:opacity-40 active:scale-95"
+          className="flex-1 py-3 rounded-xl font-bold text-base transition disabled:opacity-40 active:scale-95"
           style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#000' }}>
           {isMyTurn
             ? `🎲 Lanzar${(rollCount ?? 0) > 0 ? ` (${rollsLeft})` : ''}`
@@ -69,7 +69,7 @@ export default function DicePanel({
           <button
             onClick={onPlay}
             disabled={!canPlay || !isMyTurn}
-            className="flex-1 py-2.5 rounded-xl font-black text-sm transition active:scale-95 disabled:opacity-30"
+            className="flex-1 py-3 rounded-xl font-black text-base transition active:scale-95 disabled:opacity-30"
             style={{ background: 'linear-gradient(135deg,#22c55e,#06b6d4)', color: '#000' }}>
             ✅ JUGAR
           </button>
@@ -78,7 +78,7 @@ export default function DicePanel({
         {/* Contador 1-2-3 */}
         <div className="flex gap-1">
           {[1, 2, 3].map(n => (
-            <div key={n} className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+            <div key={n} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
               style={{
                 background: (rollCount ?? 0) >= n ? '#f59e0b' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
                 color: (rollCount ?? 0) >= n ? '#000' : (t.textMuted ?? '#666'),
