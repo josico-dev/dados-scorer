@@ -2,17 +2,19 @@
 //
 // Permite añadir, renombrar y eliminar jugadores.
 // Se abre desde el botón "Jugadores" del header.
+// maxPlayers limita el total (p.ej. 2 cuando se está jugando online).
 
 import { useState } from 'react'
 
-export default function PlayersModal({ players, onSave, onClose }) {
-  const [names, setNames] = useState([...players])
+export default function PlayersModal({ players, maxPlayers = Infinity, onSave, onClose }) {
+  const [names, setNames] = useState(() => [...players].slice(0, maxPlayers))
 
   function updateName(index, newName) {
     setNames(prev => prev.map((n, i) => i === index ? newName : n))
   }
 
   function addPlayer() {
+    if (names.length >= maxPlayers) return
     setNames(prev => [...prev, `Jugador ${prev.length + 1}`])
   }
 
@@ -20,6 +22,9 @@ export default function PlayersModal({ players, onSave, onClose }) {
     if (names.length <= 1) return // mínimo 1 jugador
     setNames(prev => prev.filter((_, i) => i !== index))
   }
+
+  const canAdd = names.length < maxPlayers
+  const atLimit = maxPlayers !== Infinity && names.length >= maxPlayers
 
   return (
     // Fondo oscuro — al hacer clic fuera se cierra el modal
@@ -32,7 +37,10 @@ export default function PlayersModal({ players, onSave, onClose }) {
         className="w-full max-w-md bg-slate-800 rounded-2xl p-5 shadow-2xl border border-white/10 mb-2"
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-white font-bold text-lg mb-4">👥 Jugadores</h2>
+        <h2 className="text-white font-bold text-lg mb-1">👥 Jugadores</h2>
+        {maxPlayers !== Infinity && (
+          <p className="text-white/50 text-xs mb-3">Máximo {maxPlayers} jugadores en modo online</p>
+        )}
 
         {/* Lista de jugadores */}
         <div className="space-y-2 mb-4">
@@ -56,9 +64,10 @@ export default function PlayersModal({ players, onSave, onClose }) {
         {/* Botón añadir jugador */}
         <button
           onClick={addPlayer}
-          className="w-full py-2 rounded-lg border border-dashed border-white/20 text-white/50 text-sm hover:border-amber-400/50 hover:text-amber-300 transition mb-4"
+          disabled={!canAdd}
+          className="w-full py-2 rounded-lg border border-dashed border-white/20 text-white/50 text-sm hover:border-amber-400/50 hover:text-amber-300 transition mb-4 disabled:opacity-30 disabled:hover:border-white/20 disabled:hover:text-white/50"
         >
-          + Añadir jugador
+          {atLimit ? `Máximo ${maxPlayers} alcanzado` : '+ Añadir jugador'}
         </button>
 
         {/* Acciones */}
